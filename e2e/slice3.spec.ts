@@ -72,13 +72,34 @@ test("a crisis phrase in free text opens help at once and never blocks", async (
   expect(escalated.map((e) => e.properties)).toEqual([{ source: "local", on_step: "conditions" }]);
 });
 
-test("a concerning safety answer shows help and Continue still works", async ({ page }) => {
+test("Safety loads with nothing preselected on either question", async ({ page }) => {
+  await toConditions(page);
+  await page.getByRole("button", { name: "Skip for now" }).click();
+  await expect(page.getByText("Step 4 of 10 · Safety")).toBeVisible();
+  for (const radio of await page.getByRole("radio").all()) {
+    await expect(radio).not.toBeChecked();
+  }
+});
+
+test("a concerning safety answer shows help, fires escalation, and Continue still works", async ({ page }) => {
   await toConditions(page);
   await page.getByRole("button", { name: "Skip for now" }).click();
   await page.getByRole("group", { name: /thoughts of ending your life/ }).getByLabel("Yes", { exact: true }).check();
   await expect(page.getByRole("region", { name: /don't have to wait/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/insurance$/);
+  const escalated = (await events(page)).filter((e) => e.event === "safety.escalated");
+  expect(escalated.map((e) => e.properties)).toEqual([{ source: "answer", on_step: "safety" }]);
+});
+
+test("'Yes' to past hospitalization shows a help panel under that question", async ({ page }) => {
+  await toConditions(page);
+  await page.getByRole("button", { name: "Skip for now" }).click();
+  const hospital = page.getByRole("group", { name: /hospital/ });
+  await hospital.getByLabel("Yes", { exact: true }).check();
+  await expect(hospital.getByRole("link", { name: "Call or text 988" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
 });
 
 test("the model can escalate free text the local check missed", async ({ page }) => {

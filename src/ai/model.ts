@@ -42,7 +42,7 @@ function costFacts(path: CostPath): string {
     `Self pay price, each follow-up visit: $${selfPayPrices.followUp.value}`,
     `Card on file, with a $${cardTerms.authorizationAmount.value} authorization when it is saved`,
     `The visit is charged about ${cardTerms.chargeDaysAfterVisit.value} days after it happens`,
-    `Cancelling with less than ${cancellation.windowHours.value} hours' notice has a fee: $${cancellation.initialVisitFee.value} for a first visit, $${cancellation.followUpFee.value} for a follow-up visit`,
+    `Cancelling with less than ${cancellation.windowHours.value} hours' notice may have a $${cancellation.followUpFee.value} fee`,
   ];
   if (path !== "self_pay") {
     facts.push("They may use insurance. Their cost with insurance is confirmed after their coverage is verified, after booking. Say both the self pay prices and this.");
