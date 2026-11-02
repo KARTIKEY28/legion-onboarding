@@ -135,7 +135,7 @@ The goal is to measure the whole journey to the first completed visit, with one 
 | Safety | safety.viewed, safety.submitted, safety.escalated | The dedicated crisis and hospitalization screen. safety.escalated fires when the crisis panel expands from an answer or free text, with the source (local check or model) and the step. Never the answers |
 | Insurance | insurance.viewed, insurance.submitted | The path only: insured, self_pay or not_sure. Never plan names, IDs or free text. eligibility.checked fires again here (step insurance) when "not sure" about Medicare or Medicaid is confirmed |
 | Needs | needs.viewed, needs.submitted | Which preferences were answered, never their values |
-| Match | match.viewed, provider.selected | Second cliff, so record how many options were viewed first |
+| Match | match.viewed, provider.selected | match.viewed carries the match count and whether the no-strong-match state was shown. provider.selected carries from (top_match or full_list), rank and evidence tier, never the clinician's name |
 | Cost and terms | cost.viewed, cost_summary.shown, cost_summary.validation_failed | cost.viewed carries the insurance path. cost_summary.shown carries the source (model or template). validation_failed carries why a model summary was rejected (a number not in the fixed set, a missing fact, ceiling wording, or format) |
 | Account | account.viewed, account.created | Third cliff |
 | Payment | payment.viewed, payment.succeeded | Today we only see the page view |

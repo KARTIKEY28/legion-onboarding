@@ -53,8 +53,10 @@ export interface SessionAnswers {
   };
   /** The answer when "not sure" about Medicare or Medicaid was asked again on Insurance. */
   coverageAtInsurance?: "yes" | "no" | "unsure";
-  /** Set by the temporary Match stub until slice 5. */
-  selectedClinician?: { id: string; name: string; sample: true };
+  /** The clinician the patient picked on Match. */
+  selectedClinician?: { id: string; name: string };
+  /** The time the patient picked. iso is the slot; label is for display. */
+  selectedSlot?: { iso: string; label: string };
   /** Cost summaries already written, by insurance path. */
   costSummaries?: Partial<Record<"insured" | "self_pay" | "not_sure", CostSummary>>;
   /** Reflect-back lines already written, keyed by step and answers, so back and refresh don't refetch. */
