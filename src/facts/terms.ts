@@ -1,0 +1,85 @@
+import type { Fact } from "./index";
+
+/**
+ * Every price and term the Cost and terms screen may state. AI phrases these
+ * values and never creates them: the cost summary validator rejects any amount,
+ * number or time period that is not in COST_FACT_VALUES below.
+ *
+ * TO RE-CHECK: values marked "needs_recheck" were taken from Legion's payment
+ * page and Legion's email, and must be re-checked before launch.
+ */
+
+export const selfPayPrices = {
+  currency: "USD",
+  initialVisit: {
+    value: 250,
+    status: "needs_recheck",
+    // Source: Legion's payment page (self pay price for the first visit).
+    source: "Legion's payment page",
+  },
+  followUp: {
+    value: 150,
+    status: "needs_recheck",
+    // Source: Legion's payment page (self pay price for follow-up visits).
+    source: "Legion's payment page",
+  },
+} satisfies { currency: string; initialVisit: Fact<number>; followUp: Fact<number> };
+
+export const insuredCost = {
+  /** The copay estimate arrives after booking, so it is never shown before it. */
+  estimateBeforePayment: {
+    value: null,
+    status: "unknown",
+    // Source: PRD cost wording. Coverage is confirmed after booking.
+    source: "PRD cost wording: insured cost is confirmed after verification",
+  },
+} satisfies Record<string, Fact<null>>;
+
+export const cardTerms = {
+  authorizationAmount: {
+    value: 1,
+    status: "needs_recheck",
+    // Source: Legion's payment page ($1 authorization when the card is saved).
+    source: "Legion's payment page",
+  },
+  chargeDaysAfterVisit: {
+    value: 5,
+    status: "needs_recheck",
+    // Source: Legion's email (the visit is charged about 5 days after it happens).
+    source: "Legion's email",
+  },
+} satisfies Record<string, Fact<number>>;
+
+export const cancellation = {
+  windowHours: {
+    value: 48,
+    status: "needs_recheck",
+    // Source: Legion's payment page and email (48 hour cancellation policy).
+    source: "Legion's payment page and email",
+  },
+  initialVisitFee: {
+    value: 250,
+    status: "needs_recheck",
+    // Source: Legion's email (late cancellation fee for a first visit).
+    source: "Legion's email",
+  },
+  followUpFee: {
+    value: 100,
+    status: "needs_recheck",
+    // Source: Legion's email (late cancellation fee for a follow-up visit).
+    source: "Legion's email",
+  },
+} satisfies Record<string, Fact<number>>;
+
+/** The only amounts, numbers and periods a cost summary may contain. */
+export const COST_FACT_VALUES = {
+  dollars: [
+    selfPayPrices.initialVisit.value,
+    selfPayPrices.followUp.value,
+    cardTerms.authorizationAmount.value,
+    cancellation.initialVisitFee.value,
+    cancellation.followUpFee.value,
+  ],
+  hours: [cancellation.windowHours.value],
+  days: [cardTerms.chargeDaysAfterVisit.value],
+} as const;

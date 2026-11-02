@@ -1,0 +1,206 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
+import { trackOnce, useTrackOnce } from "@/analytics/hooks";
+import { getTracker } from "@/analytics/client";
+import { DobQuestion, ExclusionNote, RadioQuestion, type DobFields } from "@/components/form";
+import { LoadingScreen, PrimaryButton, Progress, Screen, TextLink } from "@/components/ui";
+import {
+  checkAge,
+  checkCoverage,
+  checkTexas,
+  dobProblem,
+  parseDob,
+  type CheckResult,
+  type CoverageAnswer,
+  type Criterion,
+  type DateOfBirth,
+  type YesNo,
+} from "@/eligibility";
+import { eligibility } from "@/facts";
+import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
+
+const DOB_MESSAGES = {
+  incomplete: "Please add your month, day and year of birth.",
+  not_a_date: "That date doesn't look right. Try something like 4, 15, 1990.",
+  in_future: "That date is in the future. Please check the year.",
+  too_long_ago: "That year looks too long ago. Please check it.",
+} as const;
+
+/** Records an eligibility result the moment an answer arrives, once per criterion and result. */
+function recordCheck(criterion: Criterion, result: CheckResult) {
+  trackOnce(`eligibility.checked:${criterion}:${result}`, "eligibility.checked", { criterion, result, on_step: "about" });
+}
+
+/** A valid date of birth, or the reason it isn't one. */
+function readDob(fields: DobFields, today: Date): DateOfBirth | keyof typeof DOB_MESSAGES {
+  const dob = parseDob(fields);
+  if (typeof dob === "string") return dob;
+  return dobProblem(dob, today) ?? dob;
+}
+
+export default function AboutPage() {
+  const answers = useAnswers();
+  useTrackOnce("about.viewed", "about.viewed");
+  if (!answers) return <LoadingScreen />;
+  return <AboutForm initial={answers} />;
+}
+
+function AboutForm({ initial }: { initial: SessionAnswers }) {
+  const router = useRouter();
+  const today = useRef(new Date()).current;
+  const [inTexas, setInTexas] = useState<YesNo | undefined>(initial.inTexas);
+  const [dob, setDob] = useState<DobFields>(initial.dob ?? { month: "", day: "", year: "" });
+  const [coverage, setCoverage] = useState<CoverageAnswer | undefined>(initial.coverage);
+  const [dobTouched, setDobTouched] = useState(Boolean(initial.dob));
+  const [submitted, setSubmitted] = useState(false);
+  const summaryRef = useRef<HTMLDivElement>(null);
+
+  const dobResult = readDob(dob, today);
+  const dobValid = typeof dobResult !== "string";
+  const ageResult = dobValid ? checkAge(dobResult, today) : undefined;
+
+  function chooseTexas(value: YesNo) {
+    setInTexas(value);
+    recordCheck("texas", checkTexas(value));
+  }
+
+  function changeDob(value: DobFields) {
+    setDob(value);
+    const result = readDob(value, today);
+    if (typeof result !== "string") recordCheck("age", checkAge(result, today));
+  }
+
+  function chooseCoverage(value: CoverageAnswer) {
+    setCoverage(value);
+    recordCheck("coverage", checkCoverage(value));
+  }
+
+  const errors = {
+    texas: inTexas ? undefined : "Please choose yes or no so we know whether Legion can see you.",
+    dob: dobValid ? undefined : DOB_MESSAGES[dobResult as keyof typeof DOB_MESSAGES],
+    coverage: coverage ? undefined : "Please choose an answer. Not sure is fine.",
+  };
+  const shown = {
+    texas: submitted ? errors.texas : undefined,
+    dob: submitted || (dobTouched && dobResult !== "incomplete") ? errors.dob : undefined,
+    coverage: submitted ? errors.coverage : undefined,
+  };
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setSubmitted(true);
+    if (errors.texas || errors.dob || errors.coverage) {
+      requestAnimationFrame(() => summaryRef.current?.focus());
+      return;
+    }
+    const exclusions: Criterion[] = [];
+    if (checkTexas(inTexas!) === "fail") exclusions.push("texas");
+    if (ageResult === "fail") exclusions.push("age");
+    if (checkCoverage(coverage!) === "fail") exclusions.push("coverage");
+
+    updateAnswers({
+      inTexas,
+      dob,
+      coverage,
+      confirmCoverageAtInsurance: coverage === "unsure",
+      exclusions,
+    });
+    getTracker()("about.submitted");
+    router.push(exclusions.length ? "/next-steps" : "/conditions");
+  }
+
+  const errorList = (Object.entries(shown) as [keyof typeof shown, string | undefined][]).filter(([, e]) => e);
+
+  return (
+    <Screen>
+      <Progress step="about" />
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-semibold">A little about you</h1>
+        <p className="text-ink-muted">Three quick questions so we know Legion can see you.</p>
+      </div>
+
+      {errorList.length > 0 && submitted && (
+        <div ref={summaryRef} tabIndex={-1} role="alert" className="flex flex-col gap-2 rounded-md bg-danger-soft p-4">
+          <p className="font-semibold">A couple of answers still need a look</p>
+          <ul className="flex flex-col gap-1">
+            {errorList.map(([field, message]) => (
+              <li key={field}>
+                <a href={`#${field}`} className="text-danger underline underline-offset-2">
+                  {message}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <form noValidate onSubmit={submit} className="flex flex-col gap-8">
+        <RadioQuestion
+          id="texas"
+          legend={`Will you be in ${eligibility.stateName.value} for your visits?`}
+          reason={`Legion's clinicians can only see patients who are in ${eligibility.stateName.value} during their visits.`}
+          options={[
+            { value: "yes", label: "Yes" },
+            { value: "no", label: "No" },
+          ]}
+          value={inTexas}
+          onChange={chooseTexas}
+          error={shown.texas}
+          note={
+            inTexas === "no" && (
+              <ExclusionNote>
+                Legion can only see you while you&apos;re in {eligibility.stateName.value}. When you continue,
+                we&apos;ll show you what you can do instead.
+              </ExclusionNote>
+            )
+          }
+        />
+
+        <DobQuestion
+          value={dob}
+          onChange={changeDob}
+          onBlur={() => setDobTouched(true)}
+          error={shown.dob}
+          note={
+            ageResult === "fail" && (
+              <ExclusionNote>
+                Legion sees adults {eligibility.minimumAge.value} and older. When you continue, we&apos;ll show you
+                other ways to find care.
+              </ExclusionNote>
+            )
+          }
+        />
+
+        <RadioQuestion
+          id="coverage"
+          legend="Do you have Medicare or Medicaid?"
+          reason="Legion can't accept Medicare or Medicaid right now, so we check before going further."
+          help="Not sure? Your insurance card or your insurer can tell you. You can also choose Not sure and we'll confirm it at the insurance step."
+          options={[
+            { value: "no", label: "No" },
+            { value: "yes", label: "Yes" },
+            { value: "unsure", label: "Not sure" },
+          ]}
+          value={coverage}
+          onChange={chooseCoverage}
+          error={shown.coverage}
+          note={
+            coverage === "yes" && (
+              <ExclusionNote>
+                Legion can&apos;t accept Medicare or Medicaid right now. When you continue, we&apos;ll show you what
+                you can do instead.
+              </ExclusionNote>
+            )
+          }
+        />
+
+        <div className="flex flex-col items-start gap-4">
+          <PrimaryButton type="submit">Continue</PrimaryButton>
+          <TextLink href="/start">Back</TextLink>
+        </div>
+      </form>
+    </Screen>
+  );
+}
