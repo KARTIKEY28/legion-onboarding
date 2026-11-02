@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { COST_FACT_VALUES, cancellation, cardTerms, selfPayPrices } from "@/facts";
+import { cancellation, cardTerms, selfPayPrices } from "@/facts";
 
 /**
  * Cost and terms summary (AI feature 3). The model only phrases the fixed
@@ -47,7 +47,7 @@ export function templateCost(path: CostPath): CostSections {
   return {
     pay,
     charged: `We save your card and place a $${cardTerms.authorizationAmount.value} authorization to check it. You're charged about ${cardTerms.chargeDaysAfterVisit.value} days after each visit.`,
-    cancel: `If you cancel with less than ${cancellation.windowHours.value} hours' notice, there's a fee: $${cancellation.initialVisitFee.value} for a first visit and $${cancellation.followUpFee.value} for a follow up.`,
+    cancel: `If you cancel with less than ${cancellation.windowHours.value} hours' notice, there may be a $${cancellation.followUpFee.value} fee.`,
   };
 }
 
@@ -96,18 +96,32 @@ export function extractQuantities(text: string): Quantity[] {
   return found;
 }
 
-const ALL_VALUES = new Set<number>([...COST_FACT_VALUES.dollars, ...COST_FACT_VALUES.hours, ...COST_FACT_VALUES.days]);
+/**
+ * Allowed amounts and periods PER SECTION, so a value that is fine in one place
+ * is rejected in another. The first-visit price is a valid amount in "pay", but is
+ * not a valid cancellation fee in "cancel" (the fee is lower; Legion email Oct 2026).
+ */
+const ALLOWED_BY_SECTION: Record<keyof CostSections, { dollars: number[]; hours: number[]; days: number[] }> = {
+  pay: { dollars: [initial, followUp], hours: [], days: [] },
+  charged: { dollars: [cardTerms.authorizationAmount.value], hours: [], days: [cardTerms.chargeDaysAfterVisit.value] },
+  cancel: {
+    dollars: [cancellation.initialVisitFee.value, cancellation.followUpFee.value],
+    hours: [cancellation.windowHours.value],
+    days: [],
+  },
+};
 
-export function isAllowedQuantity(q: Quantity): boolean {
+export function isAllowedQuantity(q: Quantity, section: keyof CostSections): boolean {
+  const allowed = ALLOWED_BY_SECTION[section];
   switch (q.unit) {
     case "dollars":
-      return (COST_FACT_VALUES.dollars as readonly number[]).includes(q.value);
+      return allowed.dollars.includes(q.value);
     case "hours":
-      return (COST_FACT_VALUES.hours as readonly number[]).includes(q.value);
+      return allowed.hours.includes(q.value);
     case "days":
-      return (COST_FACT_VALUES.days as readonly number[]).includes(q.value);
+      return allowed.days.includes(q.value);
     case "number":
-      return ALL_VALUES.has(q.value);
+      return [...allowed.dollars, ...allowed.hours, ...allowed.days].includes(q.value);
     default:
       return false;
   }
@@ -126,7 +140,6 @@ const REQUIRED: Record<keyof CostSections, Quantity[]> = {
   ],
   cancel: [
     { value: cancellation.windowHours.value, unit: "hours" },
-    { value: cancellation.initialVisitFee.value, unit: "dollars" },
     { value: cancellation.followUpFee.value, unit: "dollars" },
   ],
 };
@@ -137,7 +150,7 @@ export function validateCost(sections: CostSections, path: CostPath): CostValida
     if (!text || text.length > 320 || /[\n\r]/.test(text)) return "format";
     if (CEILING.test(text)) return "ceiling_language";
     const quantities = extractQuantities(text);
-    if (!quantities.every(isAllowedQuantity)) return "number_not_allowed";
+    if (!quantities.every((q) => isAllowedQuantity(q, key))) return "number_not_allowed";
     const has = (need: Quantity) => quantities.some((q) => q.value === need.value && (q.unit === need.unit || q.unit === "number"));
     if (!REQUIRED[key].every(has)) return "missing_fact";
   }

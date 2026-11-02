@@ -58,16 +58,16 @@ export const cancellation = {
     source: "Legion's payment page and email",
   },
   initialVisitFee: {
-    value: 250,
+    value: 100,
     status: "needs_recheck",
-    // Source: Legion's email (late cancellation fee for a first visit).
-    source: "Legion's email",
+    // Source: Legion email, Oct 2026. Older payment page showed $250 for first visit; email is newer.
+    source: "Legion email, Oct 2026 (supersedes the older payment page's $250)",
   },
   followUpFee: {
     value: 100,
     status: "needs_recheck",
-    // Source: Legion's email (late cancellation fee for a follow-up visit).
-    source: "Legion's email",
+    // Source: Legion email, Oct 2026. The 48 hour policy can trigger a $100 fee.
+    source: "Legion email, Oct 2026",
   },
 } satisfies Record<string, Fact<number>>;
 

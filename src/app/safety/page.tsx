@@ -32,9 +32,20 @@ function SafetyForm({ answers }: { answers: SessionAnswers }) {
   const conditions = answers.conditions ?? { topics: [], unsure: false, skipped: true };
   const labels = conditionTopics.value.filter((t) => conditions.topics.includes(t.id)).map((t) => t.label);
 
+  // Any answer other than "no" on a safety question expands the crisis panel under it
+  // and records an escalation. The answer itself is never sent, only that help was shown.
+  function escalate(question: string) {
+    trackOnce(`safety.escalated:${question}:answer`, "safety.escalated", { source: "answer", on_step: "safety" });
+  }
+
   function chooseRecent(value: SafetyAnswer) {
     setRecentThoughts(value);
-    if (value !== "no") trackOnce("safety.escalated:safety:local", "safety.escalated", { source: "local", on_step: "safety" });
+    if (value !== "no") escalate("recent");
+  }
+
+  function chooseHospitalized(value: SafetyAnswer) {
+    setHospitalized(value);
+    if (value === "yes") escalate("hospitalized");
   }
 
   function submit(event: React.FormEvent) {
@@ -81,7 +92,8 @@ function SafetyForm({ answers }: { answers: SessionAnswers }) {
           reason="This helps your clinician understand what care has looked like for you before."
           options={OPTIONS}
           value={hospitalized}
-          onChange={setHospitalized}
+          onChange={chooseHospitalized}
+          note={hospitalized === "yes" && <CrisisPanel variant="gentle" />}
         />
 
         <div className="flex flex-col items-start gap-4">

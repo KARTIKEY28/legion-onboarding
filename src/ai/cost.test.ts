@@ -13,7 +13,7 @@ import {
 const good: CostSections = {
   pay: "Without insurance, your first visit is $250 and follow ups are $150. With insurance, we confirm your cost after checking your coverage.",
   charged: "We keep your card on file with a $1 authorization, and charge you about five days after each visit.",
-  cancel: "Cancel at least 48 hours ahead to avoid a fee. Late cancellations cost $250 for a first visit or $100 for a follow up.",
+  cancel: "Cancel at least 48 hours ahead to avoid a fee. A late cancellation may cost $100.",
 };
 
 const asOutput = (s: CostSections) => `PAY: ${s.pay}\nCHARGED: ${s.charged}\nCANCEL: ${s.cancel}`;
@@ -74,6 +74,12 @@ describe("cost summary validator", () => {
 
   it("rejects a fixed amount in the wrong unit", () => {
     expect(validateCost({ ...good, cancel: good.cancel.replace("48 hours", "48 days") }, "insured")).toBe("number_not_allowed");
+  });
+
+  it("rejects $250 as a cancellation fee, though $250 is a valid first-visit price", () => {
+    // $250 is the self-pay first-visit price (allowed in "pay"), never a cancellation fee.
+    expect(validateCost({ ...good, cancel: good.cancel.replace("$100", "$250") }, "insured")).toBe("number_not_allowed");
+    expect(validateCost(good, "insured")).toBeNull();
   });
 
   it("rejects a missing fact, ceiling wording and a missing coverage note", () => {

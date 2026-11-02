@@ -146,9 +146,10 @@ export const EVENTS = {
   "visit.completed": event("visit"),
 
   // Cross-cutting
-  // The crisis panel expanded because of an answer or free text. Never carries the text.
+  // The crisis panel expanded. Source: a direct safety-question answer, the local
+  // free-text check, or the model. Never carries the answer or the text.
   "safety.escalated": anyStepEvent(["conditions", "safety", "needs"], {
-    source: z.enum(["local", "model"]),
+    source: z.enum(["answer", "local", "model"]),
   }),
   // Reserved for a patient-opened crisis panel (a "get help now" button); not fired yet
   "crisis.panel_opened": anyStepEvent(STEPS, {

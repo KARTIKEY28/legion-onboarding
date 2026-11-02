@@ -21,7 +21,8 @@ describe("fixed facts", () => {
     expect(cardTerms.authorizationAmount.value).toBe(1);
     expect(cardTerms.chargeDaysAfterVisit.value).toBe(5);
     expect(cancellation.windowHours.value).toBe(48);
-    expect(cancellation.initialVisitFee.value).toBe(250);
+    // Legion email Oct 2026: a single $100 fee (supersedes the older payment page's $250).
+    expect(cancellation.initialVisitFee.value).toBe(100);
     expect(cancellation.followUpFee.value).toBe(100);
   });
 
