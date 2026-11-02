@@ -6,7 +6,7 @@ import { getTracker } from "@/analytics/client";
 import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { ExclusionNote, RadioQuestion } from "@/components/form";
 import { CheckOption } from "@/components/safety";
-import { LoadingScreen, PrimaryButton, Progress, Screen, TextLink } from "@/components/ui";
+import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, barPrimary } from "@/components/ui";
 import { samplePayers } from "@/facts";
 import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
 
@@ -150,8 +150,8 @@ function InsuranceForm({ answers }: { answers: SessionAnswers }) {
         {coverage !== "yes" && (
           <RadioQuestion
             id="path"
-            legend="Choose one"
-            reason="You can change this later."
+            legend="How you'd like to pay"
+            hideLegend
             options={[
               { value: "insured", label: "I have insurance" },
               { value: "self_pay", label: "I'll pay without insurance" },
@@ -278,10 +278,11 @@ function InsuranceForm({ answers }: { answers: SessionAnswers }) {
           </p>
         )}
 
-        <div className="flex flex-col items-start gap-4">
-          <PrimaryButton type="submit">Continue</PrimaryButton>
-          <TextLink href="/safety">Back</TextLink>
-        </div>
+        <ActionBar backHref="/safety">
+          <PrimaryButton type="submit" className={barPrimary}>
+            Continue
+          </PrimaryButton>
+        </ActionBar>
       </form>
     </Screen>
   );

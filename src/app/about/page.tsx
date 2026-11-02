@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { getTracker } from "@/analytics/client";
-import { DobQuestion, ExclusionNote, RadioQuestion, type DobFields } from "@/components/form";
-import { LoadingScreen, PrimaryButton, Progress, Screen, TextLink } from "@/components/ui";
+import { DobQuestion, ExclusionNote, RadioQuestion, maskedFromFields, splitMaskedDob } from "@/components/form";
+import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, barPrimary } from "@/components/ui";
 import {
   checkAge,
   checkCoverage,
@@ -22,8 +22,8 @@ import { eligibility } from "@/facts";
 import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
 
 const DOB_MESSAGES = {
-  incomplete: "Please add your month, day and year of birth.",
-  not_a_date: "That date doesn't look right. Try something like 4, 15, 1990.",
+  incomplete: "Please enter your date of birth as MM/DD/YYYY.",
+  not_a_date: "That date doesn't look right. Use MM/DD/YYYY, like 04/15/1990.",
   in_future: "That date is in the future. Please check the year.",
   too_long_ago: "That year looks too long ago. Please check it.",
 } as const;
@@ -33,9 +33,9 @@ function recordCheck(criterion: Criterion, result: CheckResult) {
   trackOnce(`eligibility.checked:${criterion}:${result}`, "eligibility.checked", { criterion, result, on_step: "about" });
 }
 
-/** A valid date of birth, or the reason it isn't one. */
-function readDob(fields: DobFields, today: Date): DateOfBirth | keyof typeof DOB_MESSAGES {
-  const dob = parseDob(fields);
+/** A valid date of birth, or the reason it isn't one, from the masked MM/DD/YYYY string. */
+function readDob(masked: string, today: Date): DateOfBirth | keyof typeof DOB_MESSAGES {
+  const dob = parseDob(splitMaskedDob(masked));
   if (typeof dob === "string") return dob;
   return dobProblem(dob, today) ?? dob;
 }
@@ -51,7 +51,7 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
   const router = useRouter();
   const today = useRef(new Date()).current;
   const [inTexas, setInTexas] = useState<YesNo | undefined>(initial.inTexas);
-  const [dob, setDob] = useState<DobFields>(initial.dob ?? { month: "", day: "", year: "" });
+  const [dob, setDob] = useState<string>(initial.dob ? maskedFromFields(initial.dob) : "");
   const [coverage, setCoverage] = useState<CoverageAnswer | undefined>(initial.coverage);
   const [dobTouched, setDobTouched] = useState(Boolean(initial.dob));
   const [submitted, setSubmitted] = useState(false);
@@ -66,7 +66,7 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
     recordCheck("texas", checkTexas(value));
   }
 
-  function changeDob(value: DobFields) {
+  function changeDob(value: string) {
     setDob(value);
     const result = readDob(value, today);
     if (typeof result !== "string") recordCheck("age", checkAge(result, today));
@@ -102,7 +102,7 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
 
     updateAnswers({
       inTexas,
-      dob,
+      dob: splitMaskedDob(dob),
       coverage,
       confirmCoverageAtInsurance: coverage === "unsure",
       exclusions,
@@ -118,7 +118,7 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
       <Progress step="about" />
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">A little about you</h1>
-        <p className="text-ink-muted">Three quick questions so we know Legion can see you.</p>
+        <p className="text-ink-muted">Three quick questions to make sure we can care for you.</p>
       </div>
 
       {errorList.length > 0 && submitted && (
@@ -196,10 +196,11 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
           }
         />
 
-        <div className="flex flex-col items-start gap-4">
-          <PrimaryButton type="submit">Continue</PrimaryButton>
-          <TextLink href="/start">Back</TextLink>
-        </div>
+        <ActionBar backHref="/start">
+          <PrimaryButton type="submit" className={barPrimary}>
+            Continue
+          </PrimaryButton>
+        </ActionBar>
       </form>
     </Screen>
   );

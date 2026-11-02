@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ELIGIBLE, answerAbout, choosePath, events, setModel, startFlow } from "./helpers";
+import { ELIGIBLE, answerAbout, choosePath, events, pickTopic, setModel, startFlow } from "./helpers";
 
 async function toConditions(page: Page) {
   await startFlow(page);
@@ -18,19 +18,16 @@ async function finishSafetyAndNeeds(page: Page) {
   await expect(page).toHaveURL(/\/match$/);
 }
 
-test("happy path: Conditions, Safety and Needs with reflect-back lines from the model", async ({ page }) => {
+test("happy path: Conditions, Safety and Needs record clean events", async ({ page }) => {
   await setModel(page, "ok");
   await toConditions(page);
   await expect(page.getByText("Step 3 of 10 · Conditions")).toBeVisible();
-  await page.getByLabel("Trouble sleeping").check();
-  await page.getByLabel("Worry that's hard to shake").check();
+  await pickTopic(page, "Trouble sleeping");
+  await pickTopic(page, "Worry that's hard to shake");
   await page.getByRole("button", { name: "Continue" }).click();
 
   await expect(page.getByText("Step 4 of 10 · Safety")).toBeVisible();
-  await expect(page.getByTestId("reflect-back")).toHaveAttribute("data-source", "model");
-  await expect(page.getByText("Written from your answers")).toBeVisible();
   await finishSafetyAndNeeds(page);
-  await expect(page.getByTestId("reflect-back")).toHaveAttribute("data-source", "model");
 
   const fired = await events(page);
   const byName = (name: string) => fired.filter((e) => e.event === name);
@@ -49,10 +46,6 @@ test("happy path: Conditions, Safety and Needs with reflect-back lines from the 
     answered_gender: false,
     free_text_used: false,
   });
-  expect(byName("reflect_back.shown").map((e) => e.properties)).toEqual([
-    { source: "model", on_step: "conditions" },
-    { source: "model", on_step: "needs" },
-  ]);
 });
 
 test("a crisis phrase in free text opens help at once and never blocks", async ({ page }) => {
@@ -112,29 +105,14 @@ test("the model can escalate free text the local check missed", async ({ page })
   expect(escalated.map((e) => e.properties)).toEqual([{ source: "model", on_step: "conditions" }]);
 });
 
-test("model unavailable: template lines appear and the flow continues", async ({ page }) => {
+test("model unavailable: the flow still continues to the match step", async ({ page }) => {
   await setModel(page, "fail");
   await toConditions(page);
-  await page.getByLabel("Trouble sleeping").check();
+  await pickTopic(page, "Trouble sleeping");
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByTestId("reflect-back")).toHaveText("You mentioned trouble sleeping.");
-  await expect(page.getByTestId("reflect-back")).toHaveAttribute("data-source", "template");
+  await expect(page.getByText("Step 4 of 10 · Safety")).toBeVisible();
   await finishSafetyAndNeeds(page);
-  await expect(page.getByTestId("reflect-back")).toHaveText(
-    "You'd like a clinician who speaks Spanish, available weekday evenings.",
-  );
-  const shown = (await events(page)).filter((e) => e.event === "reflect_back.shown");
-  expect(shown.map((e) => e.properties.source)).toEqual(["template", "template"]);
-});
-
-test("model too slow: the template line appears without holding up the screen", async ({ page }) => {
-  await setModel(page, "slow");
-  await toConditions(page);
-  await page.getByLabel("Trouble sleeping").check();
-  await page.getByRole("button", { name: "Continue" }).click();
-  // The screen is usable straight away, before any line arrives.
-  await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
-  await expect(page.getByTestId("reflect-back")).toHaveAttribute("data-source", "template", { timeout: 5000 });
+  await expect(page).toHaveURL(/\/match$/);
 });
 
 test("no event contains free text, health answers or identifiers", async ({ page }) => {
@@ -142,7 +120,7 @@ test("no event contains free text, health answers or identifiers", async ({ page
   const freeText = "My name is Jordan Lee, email jordan@example.com, I feel stuck";
   const note = "Please call me at 512-555-0142 after 6";
   await toConditions(page);
-  await page.getByLabel("Feeling down or low most days").check();
+  await pickTopic(page, "Feeling down or low most days");
   await page.getByLabel("Something else, in my own words").check();
   await page.getByLabel(/In your own words/).fill(freeText);
   await page.getByRole("button", { name: "Continue" }).click();

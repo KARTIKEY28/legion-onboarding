@@ -20,8 +20,30 @@ export function TextLink({ className = "", ...props }: ComponentProps<typeof Lin
 }
 
 export function Screen({ children }: { children: ReactNode }) {
-  return <main className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 pt-8 pb-16">{children}</main>;
+  return <main className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 pt-8 pb-4 md:pb-16">{children}</main>;
 }
+
+/**
+ * The single primary action for a screen, plus an optional Back link.
+ * On mobile it is a sticky bottom bar (with safe-area padding) so the primary
+ * button is always in view without scrolling; on desktop it sits inline.
+ * Place it as the last child of the screen's form (or Screen).
+ */
+export function ActionBar({ children, backHref, backLabel = "Back" }: { children: ReactNode; backHref?: string; backLabel?: string }) {
+  return (
+    <div className="sticky bottom-0 z-10 -mx-4 mt-2 flex flex-col items-stretch gap-2 border-t border-line bg-canvas/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur md:static md:mx-0 md:mt-0 md:flex-row-reverse md:items-center md:justify-end md:gap-4 md:border-0 md:bg-transparent md:px-0 md:pt-0 md:pb-0">
+      {children}
+      {backHref && (
+        <TextLink href={backHref} className="self-center md:self-auto">
+          {backLabel}
+        </TextLink>
+      )}
+    </div>
+  );
+}
+
+/** Full-width on mobile (inside the ActionBar), auto width on desktop. */
+export const barPrimary = "w-full md:w-auto";
 
 /** One progress indicator for the whole ten-step journey. */
 export function Progress({ step }: { step: JourneyStepId }) {
@@ -63,5 +85,5 @@ export function LoadingScreen() {
 /** Development-only label; never shown to a patient. Set NEXT_PUBLIC_SHOW_DEV_LABEL=1. */
 export function DevLabel() {
   if (process.env.NEXT_PUBLIC_SHOW_DEV_LABEL !== "1") return null;
-  return <p className="px-4 py-1 text-center text-sm text-ink-muted">Prototype · slice 4 of 8</p>;
+  return <p className="px-4 py-1 text-center text-sm text-ink-muted">Prototype — internal preview</p>;
 }

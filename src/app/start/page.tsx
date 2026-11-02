@@ -1,6 +1,13 @@
-import { Progress, PrimaryLink, Screen, TextLink } from "@/components/ui";
-import { effort, eligibility } from "@/facts";
+import { ActionBar, PrimaryLink, Progress, Screen, TextLink, barPrimary } from "@/components/ui";
+import { eligibility } from "@/facts";
+import { flags } from "@/flags";
 import { StartTracker } from "./StartTracker";
+
+const STEPS = [
+  "A few short questions about you and what you're looking for.",
+  "See your matches and the full cost before you create an account or add a card.",
+  "Book a time that works for you.",
+];
 
 export default function StartPage() {
   return (
@@ -10,8 +17,8 @@ export default function StartPage() {
       <div className="flex flex-col gap-4">
         <h1 className="text-2xl font-semibold">Find a clinician who fits you</h1>
         <p>
-          Legion offers virtual visits with clinicians, for adults {eligibility.minimumAge.value} and
-          older who are in {eligibility.stateName.value}.
+          Legion offers virtual visits with clinicians, for adults {eligibility.minimumAge.value} and older who are in{" "}
+          {eligibility.stateName.value}.
         </p>
       </div>
 
@@ -19,22 +26,29 @@ export default function StartPage() {
         <h2 id="what-to-expect" className="text-lg font-semibold">
           What to expect
         </h2>
-        <p>
-          We&apos;ll ask a few short sections: {effort.sections.value.join(", ").toLowerCase()}. It takes
-          about {effort.minutesToPayment.value} minutes.
-        </p>
-        <p>You&apos;ll see your matches and the cost before you create an account or add a card.</p>
+        <ol className="flex flex-col gap-2">
+          {STEPS.map((line, i) => (
+            <li key={i} className="flex gap-2">
+              <span aria-hidden className="font-medium text-accent">
+                {i + 1}
+              </span>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ol>
+        <p className="text-ink-muted">It takes a few minutes.</p>
       </section>
 
-      <p className="text-ink-muted">
-        <span className="font-medium text-ink">Why we ask first:</span> the next screen checks where
-        you&apos;ll be and your age, so you know right away whether Legion can see you.
-      </p>
-
-      <div className="flex flex-col items-start gap-4">
-        <PrimaryLink href="/about">Get started</PrimaryLink>
-        <TextLink href="/sign-in">Already started? Sign in</TextLink>
-      </div>
+      <ActionBar>
+        <PrimaryLink href="/about" className={barPrimary}>
+          Get started
+        </PrimaryLink>
+        {flags.signIn && (
+          <TextLink href="/sign-in" className="self-center md:self-auto">
+            Already started? Sign in
+          </TextLink>
+        )}
+      </ActionBar>
     </Screen>
   );
 }

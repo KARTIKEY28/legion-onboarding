@@ -2,12 +2,13 @@ import { expect, type Page } from "@playwright/test";
 
 export interface Answers {
   texas: "Yes" | "No";
-  dob: { month: string; day: string; year: string };
+  /** Masked MM/DD/YYYY string. */
+  dob: string;
   coverage: "Yes" | "No" | "Not sure";
 }
 
-export const ADULT_DOB = { month: "4", day: "15", year: "1990" };
-export const MINOR_DOB = { month: "1", day: "1", year: String(new Date().getFullYear() - 16) };
+export const ADULT_DOB = "04/15/1990";
+export const MINOR_DOB = `01/01/${new Date().getFullYear() - 16}`;
 export const ELIGIBLE: Answers = { texas: "Yes", dob: ADULT_DOB, coverage: "No" };
 
 export async function startFlow(page: Page) {
@@ -19,14 +20,17 @@ export async function startFlow(page: Page) {
 
 export async function answerAbout(page: Page, answers: Answers) {
   await page.getByRole("group", { name: /Texas/ }).getByLabel(answers.texas, { exact: true }).check();
-  await page.getByLabel("Month").fill(answers.dob.month);
-  await page.getByLabel("Day").fill(answers.dob.day);
-  await page.getByLabel("Year").fill(answers.dob.year);
+  await page.getByLabel("Date of birth").fill(answers.dob);
   await page
     .getByRole("group", { name: /Medicare or Medicaid/ })
     .getByLabel(answers.coverage, { exact: true })
     .check();
   await page.getByRole("button", { name: "Continue" }).click();
+}
+
+/** Selects a Conditions topic chip by its label. */
+export async function pickTopic(page: Page, label: string) {
+  await page.getByRole("button", { name: label, exact: true }).click();
 }
 
 export type Envelope = { event: string; step: string; session_id: string; device_type: string; properties: Record<string, unknown> };
