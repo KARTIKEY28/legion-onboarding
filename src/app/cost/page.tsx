@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { templateCost, type CostPath, type CostSummary } from "@/ai/cost";
-import { ActionBar, LoadingScreen, PrimaryLink, Progress, Screen, barPrimary } from "@/components/ui";
+import { ActionBar, LoadingScreen, PrimaryLink, Progress, Screen, TextLink, barPrimary } from "@/components/ui";
 import { getAnswers, updateAnswers, useAnswers } from "@/session/store";
 
 const CLIENT_TIMEOUT_MS = 3000;
@@ -33,7 +33,13 @@ async function fetchSummary(path: CostPath): Promise<CostSummary> {
 export default function CostPage() {
   const answers = useAnswers();
   if (!answers) return <LoadingScreen />;
-  return <CostScreen path={answers.insurance?.path ?? "not_sure"} clinician={answers.selectedClinician?.name} />;
+  return (
+    <CostScreen
+      path={answers.insurance?.path ?? "not_sure"}
+      clinician={answers.selectedClinician?.name}
+      slotLabel={answers.selectedSlot?.label}
+    />
+  );
 }
 
 const SECTIONS = [
@@ -42,7 +48,21 @@ const SECTIONS = [
   { key: "cancel", heading: "If you need to cancel" },
 ] as const;
 
-function CostScreen({ path, clinician }: { path: CostPath; clinician?: string }) {
+/** The clinician and time the patient picked on Match, with a link back to change it. */
+function ChosenVisit({ clinician, slotLabel }: { clinician: string; slotLabel?: string }) {
+  return (
+    <section aria-label="Your chosen visit" className="flex flex-col gap-1 rounded-lg bg-accent-soft p-4">
+      <p className="text-sm text-ink-muted">Your first visit</p>
+      <p className="text-lg font-semibold">{clinician}</p>
+      {slotLabel && <p className="text-base">{slotLabel}</p>}
+      <TextLink href="/match" className="self-start text-sm">
+        Change
+      </TextLink>
+    </section>
+  );
+}
+
+function CostScreen({ path, clinician, slotLabel }: { path: CostPath; clinician?: string; slotLabel?: string }) {
   const [summary, setSummary] = useState<CostSummary | null>(() => getAnswers().costSummaries?.[path] ?? null);
   useTrackOnce("cost.viewed", "cost.viewed", () => ({ insurance_path: path }));
 
@@ -75,11 +95,10 @@ function CostScreen({ path, clinician }: { path: CostPath; clinician?: string })
       <Progress step="cost" />
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">Cost and terms</h1>
-        <p className="text-ink-muted">
-          {clinician ? `For your first visit with ${clinician}. ` : ""}Here&apos;s everything before you create an account or add a
-          card.
-        </p>
+        <p className="text-ink-muted">Here&apos;s everything before you create an account or add a card.</p>
       </div>
+
+      {clinician && <ChosenVisit clinician={clinician} slotLabel={slotLabel} />}
 
       <div aria-busy={!summary} aria-live="polite" className="flex flex-col gap-4">
         {SECTIONS.map(({ key, heading }) => (
@@ -96,11 +115,14 @@ function CostScreen({ path, clinician }: { path: CostPath; clinician?: string })
             )}
           </section>
         ))}
-        <p className="text-sm text-ink-muted">Every amount here comes from a fixed price list and is checked before it&apos;s shown.</p>
       </div>
 
       <ActionBar backHref="/match">
-        <PrimaryLink href="/account" className={barPrimary}>
+        <PrimaryLink
+          href="/account"
+          className={barPrimary}
+          onClick={() => trackOnce("reservation.requested", "reservation.requested")}
+        >
           Continue to create your account
         </PrimaryLink>
       </ActionBar>
