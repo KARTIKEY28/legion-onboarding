@@ -1,0 +1,133 @@
+# Decision log
+
+Decisions the PRD does not cover, for review. Newest at the bottom of each slice.
+Each entry says what was decided, why, and how to undo it.
+
+## Slice 1: foundations and event schema
+
+| # | Decision | Why | To change it |
+| --- | --- | --- | --- |
+| 1 | Stack is Next.js (App Router), TypeScript, Tailwind CSS v4 | One codebase for screens and the server routes AI calls will need; well supported on Vercel | Replace the scaffold; nothing else depends on it yet |
+| 2 | Deploy with Vercel's Git integration, no deploy config in the repo | Preview URL per branch, production on `main`, no secrets in CI | Any static or Node host works; CI is host independent |
+| 3 | zod checks every event at runtime | The schema doubles as the type and the guard against free text | Swap for another validator in `src/analytics/` |
+| 4 | Event properties are limited to enums, numbers and booleans, enforced by a test | The surest way to keep free text out of analytics | Loosen the test in `schema.test.ts` (not recommended) |
+| 5 | Invalid events throw in development and tests, and are dropped with a warning in production | Mistakes are loud while building but never break a patient's flow | `onInvalid` in `src/analytics/client.ts` |
+| 6 | Every event is also kept on `window.__legionEvents` in the browser | Lets slice 7 check instrumentation without an analytics vendor | Remove the debug adapter in `client.ts` |
+| 7 | No analytics vendor is wired yet; events go to the console in development | The PRD names PostHog for today's funnel but not for the prototype | Add a PostHog adapter in `client.ts` |
+| 8 | Device type comes from screen width: under 768px mobile, under 1024px tablet, otherwise desktop | The PRD asks for device type but not how to classify it | `getDeviceType()` in `client.ts` |
+| 9 | Entry source is one of direct, paid, organic, referral, other, plus a `has_utm` flag | Lets the 29% of UTM sessions be segmented without sending raw campaign strings | `onboarding.started` in `schema.ts` |
+| 10 | Extra event properties: `topic_count`, `preference_count`, `rank`, `evidence_tier`, `insurance_path`, `email_prefilled` | Each answers a question the PRD asks (how many options viewed, which tier was shown, whether nothing was asked twice) | `schema.ts` |
+| 11 | Events that can fire on any step (`crisis.panel_opened`, `ai.explanation_shown`, `slot.unavailable_at_booking`) carry `on_step`, which becomes their step | The PRD requires a step on every event | `anyStepEvent()` in `schema.ts` |
+| 12 | Added to the PRD measurement table: the `*.viewed` events for Conditions, Insurance, Needs and Account, `safety.viewed`, `safety.submitted`, `cost.viewed`, `crisis.panel_opened`, `ai.explanation_shown` | Confirmed in review: "one start and one complete event per step" needs them, and the crisis guardrail needs `crisis.panel_opened` | Remove from `docs/PRD.md` and `schema.ts` together |
+| 13 | Availability is checked when the patient confirms a time on the cost step, and again when payment is submitted. `slot.unavailable_at_booking` fires at either point, with the step | Confirmed in review: the PRD says "at booking" without naming the step | Rule 6 in `CLAUDE.md`, `schema.ts` |
+| 14 | `reservation.requested` fires when the patient confirms a time on the cost step, not at provider selection | Legion creates a reservation at provider selection, but it protects nothing, and Principle 3 puts terms first | `schema.ts` |
+| 15 | No countdown events in the catalog, and a test keeps it that way | The countdown is not built; `countdown.expired` is added only if the open decision keeps it | Remove the test in `schema.test.ts` |
+| 16 | The 10 minute countdown is kept as a fact, marked browser only and holding nothing | Confirmed in review: keeps the open decision's number on record | `countdown` in `src/facts/index.ts` |
+| 17 | Cancellation terms (48 hours, $100 fee) are confirmed facts, sourced to Legion's answer | Confirmed in review | `terms` in `src/facts/index.ts` |
+| 18 | Crisis resources are the 988 Suicide & Crisis Lifeline and 911 | The PRD requires crisis help on every screen but does not name resources; these are the US national standards | `crisisResources` in `src/facts/index.ts` |
+| 19 | A test fails if a dollar amount is written anywhere in `src/` outside `src/facts/` | Enforces facts from fixed sources | `facts.test.ts` |
+| 20 | Design tokens: warm off-white canvas, near-black ink, one muted green accent (`#2f6f62`, 5.9:1 on white); Tailwind's default colors and type sizes are switched off | The visual rules ask for tokens with one accent and a fixed type scale; switching defaults off makes other values impossible | `src/app/globals.css` |
+| 21 | Spacing scale is multiples of 4px (1, 2, 3, 4, 6, 8, 12, 16), documented but not enforced by tooling | Tailwind v4 cannot restrict spacing steps without a lint plugin | Add a lint rule in slice 7 if drift appears |
+| 22 | Light theme only for now | Mobile first, one calm look; dark mode doubles contrast checks | Add dark tokens in slice 7 |
+| 23 | Error and not-found screens exist from slice 1, in warm plain language | "Every state designed" applies to the app shell too | `src/app/error.tsx`, `src/app/not-found.tsx` |
+| 24 | The PRD lives at `docs/PRD.md` in the repo | The standing instructions point there | Move it and update `CLAUDE.md` |
+| 25 | Commit plan: the bare scaffold goes on `main`, slice work on its branch, so the PR shows only slice work | A PR needs a base to compare against | Squash into one commit on `main` |
+
+## Slice 2: Start and About you
+
+| # | Decision | Why | To change it |
+| --- | --- | --- | --- |
+| 26 | `onboarding.started` fires when the Start screen is first shown in a session, not on "Get started" | Matches today's funnel, where Start counts sessions reaching the page; `about.viewed` captures the click-through | `StartTracker.tsx` |
+| 27 | Each step's events fire once per session (`trackOnce`), so refresh, back and React's development double render don't duplicate them | "One clean event per step"; funnels count sessions | `src/analytics/hooks.ts` |
+| 28 | `eligibility.checked` fires the moment an answer arrives, once per criterion and result. Changing an answer to a different result fires again | "Check eligibility the moment the answer arrives"; counted by session and criterion as the PRD says | `recordCheck` in `about/page.tsx` |
+| 29 | Added `unconfirmed` as an `eligibility.checked` result, used for coverage "Not sure" | The PRD gives no result values, and "Not sure" is neither pass nor fail | `schema.ts` |
+| 30 | Added `guidance` as an `exclusion.next_step_shown` value, for "ask your doctor or your insurer" advice. Each exclusion fires guidance, crisis_resources and notify_me | Those are the three next steps the screen shows | `schema.ts`, `next-steps/page.tsx` |
+| 31 | A failing answer shows a calm note under the question right away, and the next-steps screen opens when the patient presses Continue, not on the click itself | Moving away the instant a radio changes would send keyboard users (arrow keys change radios) and anyone who mis-taps off the page | `about/page.tsx` |
+| 32 | One next-steps screen (`/next-steps`) covers all exclusions, with a section per reason, rather than one screen per reason | A patient can fail more than one check; one screen tells them everything once | `next-steps/page.tsx` |
+| 33 | Next-steps screen has "Answered something by mistake? Change your answers", back to prefilled About you | Principle 5: an escape on every question | `next-steps/page.tsx` |
+| 34 | Date of birth is three numeric fields (month, day, year), not a date picker | Easier on phones for birth dates, and accessible with plain labels | `DobQuestion` in `components/form.tsx` |
+| 35 | Birthdays on February 29 count as March 1 in non-leap years | Never treats someone as 18 before they are; legal conventions vary | `ageOn()` in `src/eligibility` |
+| 36 | Dates in the future or more than 120 years ago are rejected with a calm message | Catches typos without accusing anyone | `dobProblem()` |
+| 37 | The raw date of birth is kept in the session store to prefill the form, never in events | "Nobody is asked twice"; the account step may need it | `src/session/store.ts` |
+| 38 | No "Prefer not to say" on Texas or date of birth: each question says why it's needed instead. "Not sure" is the escape on coverage | Legion can't see a patient without these two answers, so skipping them can't be handled safely | `about/page.tsx` |
+| 39 | Time estimate placeholder: "about 10 minutes", marked as an assumption with a TODO to time the finished flow in slice 7 | The instructions asked for a placeholder, not a precise number | `effort` in `src/facts` |
+| 40 | "Already started? Sign in" goes to a placeholder page saying sign-in isn't part of the prototype | A link that does nothing is confusing and fails accessibility checks | `src/app/sign-in/page.tsx` |
+| 41 | `/conditions` is a placeholder that ends the flow until slice 3 and fires no events | The happy path needs somewhere to land | Replaced in slice 3 |
+| 42 | Notify-me saves the email only in the session store and sends nothing. It fires no event, since the PRD defines none | The prototype must not send personal data; email in events is forbidden | Add an event to the PRD and schema if wanted |
+| 43 | Notify-me is offered on the under-18 exclusion too, as instructed. **Flag for review:** collecting email from minors may need parental consent (COPPA applies under 13) in production | Followed the instruction; the risk belongs to a real launch | Hide `NotifyMe` for the age exclusion |
+| 44 | No external links added. Next steps use only 988, 911, and "your doctor or your insurer" style guidance | The instructions forbid inventing facts about other services | `REASONS` in `next-steps/page.tsx` |
+| 45 | A footer on every page says it's a prototype with synthetic data and asks people not to enter real health information. The slice label is now behind `NEXT_PUBLIC_SHOW_DEV_LABEL` | Safety and honesty for anyone who finds the deployed prototype; the slice label was internal | `layout.tsx` |
+| 46 | Start is counted as step 1 of 10 in the progress indicator, as in the PRD journey | "One progress indicator for the whole 10 step journey, true to the PRD" | `src/journey.ts` |
+| 47 | Entry source rules: paid UTM mediums (cpc, ppc, paid, paid_social, display) are paid; search engine referrers are organic; other sites are referral; UTM without those is other | Lets the 29% of UTM sessions be segmented without sending campaign strings | `src/analytics/entry.ts` |
+| 48 | Renamed `src/events` to `src/analytics` and sinks to adapters (`AnalyticsAdapter`). PostHog will be one more adapter | Matches the slice 2 instructions | `src/analytics/track.ts` |
+| 49 | Renamed `docs/decisions.md` to `docs/DECISIONS.md` | As instructed | — |
+| 50 | Playwright smoke tests run on a phone-sized viewport (Pixel 7) against a production build on port 3100, locally and in a separate CI job | Mobile first; a production build catches what dev mode hides | `playwright.config.ts` |
+| 51 | Page titles are one shared title for now | Client screens can't set their own title without extra structure; revisit in slice 7 | `layout.tsx` |
+
+## Slice 3: Conditions, Safety, Needs, reflect-back and the safety check
+
+| # | Decision | Why | To change it |
+| --- | --- | --- | --- |
+| 52 | **Flag for review:** the Conditions topic list is a plain-language placeholder of 12 topics, marked as an assumption. It needs checking against Legion's real Conditions options | No source for Legion's list yet; labels avoid diagnostic terms | `conditionTopics` in `src/facts` |
+| 53 | "I'm not sure" and the topics exclude each other: choosing one clears the other. "Something else, in my own words" opens an optional text box | Keeps the answer honest and simple | `conditions/page.tsx` |
+| 54 | Continue with nothing chosen shows a calm prompt to choose, pick "I'm not sure", or skip. "Skip for now" always continues | One primary action, and skipping is explicit rather than accidental | `conditions/page.tsx` |
+| 55 | **Flag for review:** Safety asks two questions: "In the past month, have you had thoughts of ending your life or hurting yourself?" and "Have you ever stayed in a hospital overnight or longer for your mental health?" Each offers No, Yes, I'd rather not say, and both can be left unanswered | Plain, calm wording that asks about recent safety and past hospitalization, as asked | `safety/page.tsx` |
+| 56 | "Yes" on recent thoughts shows the full crisis panel; "I'd rather not say" shows a gentler version. Both fire `safety.escalated` (source local). A hospitalization answer shows nothing | Any doubt routes to help; past hospitalization alone isn't a crisis | `safety/page.tsx` |
+| 57 | **Open question for Legion:** should any safety answer change eligibility or routing (for example, a same-day crisis pathway)? The prototype records the answers in the session store only and always continues | The instructions forbid inventing eligibility rules from these answers | Ask Legion |
+| 58 | The safety screen says "you can keep going whatever you answer" | True in the prototype and it lowers the fear of answering honestly. Must be revisited if Legion's answer to #57 changes routing | `safety/page.tsx` |
+| 59 | The crisis panel offers 988 by phone or text, 911, and "Chat with a person at 988 online" linking to `https://988lifeline.org/chat/` as the human option. **External link, flag for review** | A human option was asked for; 988's own chat is the national service and invents nothing about Legion | `CrisisPanel` in `components/safety.tsx` |
+| 60 | If crisis language is typed, the panel appears at once (the local check runs on every keystroke, the model after an 800ms pause). If it only appears at the moment of Continue, the first press shows the panel and the second continues | The patient always sees help before leaving the screen, and is never blocked | `useSafetyCheck`, `conditions/page.tsx`, `needs/page.tsx` |
+| 61 | Once the panel is open on a screen, it stays open even if the text is deleted | "The model can only escalate, never downgrade", applied to the whole screen | `useSafetyCheck` |
+| 62 | The local check is deliberately broad: negations ("I'm not suicidal") and past tense ("used to self-harm") route to help; "cutting" alone routes to help unless followed by "back", "down" and similar | Any doubt routes to help | `src/safety/local.ts`, `docs/safety-eval.md` |
+| 63 | The model safety check treats UNSURE as escalate, and any error or timeout as "no change" | Escalation only; the local result always stands | `/api/safety-check`, `src/ai/model.ts` |
+| 64 | Draft `Clinician` type: name, pronouns, credential, photo, specialties (topic ids), languages, gender, availability windows, bio, and optional illustrative experience and outcomes. Needs asks only availability, language and clinician gender, which all exist on it | "Only ask what the match can use" | `src/clinicians/model.ts` |
+| 65 | Needs options: four availability windows (weekday mornings, afternoons, evenings, weekends), English or Spanish, and clinician gender (woman, man, nonbinary), each with "No preference" as the default | Placeholders until Legion's real clinician data arrives; Spanish because of Texas | `src/clinicians/model.ts` |
+| 66 | Visit format and insurance are not asked on Needs | Visits are virtual only, and Insurance is its own step | — |
+| 67 | Reflect-back lines appear at the top of the next screen: the Conditions line on Safety, the Needs line on the Match placeholder | They load beside the next screen, so navigation is never blocked | `ReflectBack.tsx` |
+| 68 | Reflect-back uses `claude-opus-5-5` at low effort (overridable with `ANTHROPIC_MODEL`), with server-side refusal fallbacks enabled. **Note:** with a 2.5 second budget, a slower model will often hit the template. A faster model is your call | Default model per the SDK guidance; latency is handled by the fallback | `src/ai/model.ts` |
+| 69 | A model line is used only if it is one line, 180 characters or fewer, starts with "You", has no digits, and avoids diagnosis or advice words. Otherwise the template is used | Enforces "no invented numbers, no diagnosis, no advice" in code, not just the prompt | `isAcceptableReflection()` |
+| 70 | Template lines repeat only the patient's chosen labels and never quote their free text ("You also shared more in your own words") | Free text can be sensitive, and templates must never invent | `templateReflection()` |
+| 71 | Free text the local safety check flags is never sent to the reflect-back model | A cheerful line about crisis language would be harmful | `prepareForModel()` |
+| 72 | Identifiers are removed by pattern (emails, phones, dates, long numbers, links, street addresses, names after "my name is", "I'm" and similar). It can miss names written with no cue | Best effort for a prototype on synthetic personas; production needs a reviewed approach and a BAA | `src/ai/redact.ts` |
+| 73 | Reflect-back results are cached in the session store, keyed by step and answers | Back and refresh show the same line without another model call | `ReflectBack.tsx` |
+| 74 | Offline (browser reports no network): the template appears straight away, with no request | Designed offline state | `ReflectBack.tsx`, `useSafetyCheck` |
+| 75 | The reflect-back caption reads "Written from your answers" | Subtle label, as asked; it is true for both model and template lines | `ReflectBack.tsx` |
+| 76 | New events as specified: `safety.escalated` (source local or model, with the step), `reflect_back.shown` (source, with the step it reflects as `on_step`), and the new `conditions.submitted` and `needs.submitted` properties. Existing names were reconciled: `crisis.panel_opened` is now reserved for a patient-opened help button and not fired; `ai.explanation_shown` no longer has a reflect-back kind. The PRD table is updated to match | One event per meaning, no duplicates | `schema.ts`, `docs/PRD.md` |
+| 77 | `safety.submitted` carries no properties, and safety answers are never in any event | They are health answers | `schema.ts` |
+| 78 | Tests swap in a model stand-in with `AI_MOCK=1` and an `ai_mock` cookie (ok, fail, slow). It is ignored unless `AI_MOCK=1` | Lets browser tests cover the model path, the failure path and the slow path without a real key | `src/ai/provider.ts` |
+| 79 | The secret check runs as `prebuild` and in CI, scanning every file a commit could include, and fails on Anthropic, Stripe, AWS, GitHub and Slack keys, private keys, hard-coded credentials, and any env file other than an empty `.env.example` | The repo will be public | `scripts/check-secrets.mjs` |
+| 80 | Insurance is skipped for now: Safety continues to Needs through `AFTER_SAFETY`, marked `SEAM(slice 4)`. The progress indicator still shows the true ten steps, so Needs is step 6 of 10 | As instructed | `src/journey.ts` |
+| 81 | `/match` is a placeholder that shows the Needs reflect-back line and fires no match events | The flow needs somewhere to land until slice 5 | Replaced in slice 5 |
+| 82 | "Only your care team would read this" under free-text boxes | Says where the text goes without promising anything about Legion's systems; nothing is sent in the prototype | `conditions/page.tsx`, `needs/page.tsx` |
+| 83 | Plain language to topics (AI feature 5) is not built in this slice | Not asked for in slice 3 | A later slice |
+
+## Slice 4: Insurance and the cost and terms summary
+
+| # | Decision | Why | To change it |
+| --- | --- | --- | --- |
+| 84 | **Scope change:** Legion asked to see the post-payment patient experience, designed by the author and labeled as the author's. Slices are now 5 Match, 6 Account and payment (Stripe test mode), 7 After payment (labeled "Design proposal, not Legion's current experience"), 8 Polish. Slice 7 is not built yet. The PRD build plan and CLAUDE.md are updated | Legion's request, recorded as instructed | `docs/PRD.md` Build plan, `CLAUDE.md` Scope |
+| 85 | **Flag for re-check:** prices and terms were taken from Legion's payment page and Legion's email: $250 first visit and $150 follow up (self pay), card on file with a $1 authorization, charged about 5 days after the visit, 48 hour cancellation policy with fees of $250 (first visit) and $100 (follow up). All are marked `needs_recheck`, with a source on each value | As instructed | `src/facts/terms.ts` |
+| 86 | The terms file is `src/facts/terms.ts`, not `src/data/terms.ts`, and is re-exported from `src/facts` | CLAUDE.md already makes `src/facts/` the single home for fixed facts, and a test guards it | Move the file and update imports |
+| 87 | The earlier late-cancellation fee of $100 for every visit is replaced by $250 (first visit) and $100 (follow up), from Legion's email | Newer, more specific source | `src/facts/terms.ts` |
+| 88 | The model writes three labeled lines (PAY, CHARGED, CANCEL). Each must be one line under 320 characters | Easy to check, and maps to the three sections on screen | `parseCostOutput()` |
+| 89 | Validator rules: every dollar amount, hour count, day count and bare number must be one of the fixed values in the right unit ("$48" and "250 hours" fail). Weeks, months, minutes and percentages always fail. Number words ("five", "forty-eight", "a hundred and fifty") are read as numbers. Each section must still state all of its own facts. Insured and not sure summaries must say the cost is confirmed. Ceiling wording ("at most", "up to", "no more than", "maximum", "never pay more"...) fails | "Reject any number not in the fixed set", plus guards against omission and the ceiling rule | `validateCost()` in `src/ai/cost.ts` |
+| 90 | `cost_summary.validation_failed` carries a reason: number_not_allowed, missing_fact, ceiling_language or format | Shows how often and why the model is overruled, without sending any text | `schema.ts` |
+| 91 | The "not sure yet" path uses the insured wording (both self pay prices, plus "confirmed after we verify your coverage") | The patient may still use insurance | `templateCost()` |
+| 92 | Template wording for when you're charged: "We save your card and place a $1 authorization to check it. You're charged about 5 days after each visit." It doesn't say whether the $1 is released | Not stated in the sources; to confirm with Legion | `templateCost()` |
+| 93 | Template wording for cancelling covers only cancelling with less than 48 hours' notice. It says nothing about rescheduling or missed visits | Not in the sources | `templateCost()` |
+| 94 | Cost summaries are cached in the session store by insurance path | Back and refresh show the same text without another model call | `cost/page.tsx` |
+| 95 | The cost screen's caption reads "Every amount here comes from a fixed price list and is checked before it's shown" | Honest about how it was written, without naming AI on every line | `cost/page.tsx` |
+| 96 | The cost summary reuses the slice 3 model settings (claude-opus-5-5, low effort, refusal fallbacks, 2.5 seconds, template on anything else) | One model path to maintain | `src/ai/model.ts` |
+| 97 | Insured fields: plan (select of four synthetic names plus Other with a text box), member ID (required, at least 3 characters), group ID (optional). No date of birth or subscriber details are asked | "Only what is needed to verify later"; DOB was asked on About you | `insurance/page.tsx` |
+| 98 | Plan names are made up and labeled "Sample plan names for this prototype": Example Health Plan, Sample Insurance Co., Demo Care Network, Placeholder Health | No real insurance data anywhere | `src/facts/insurance.ts` |
+| 99 | **Open question for Legion:** "I'll add my insurance details later". Can a patient book on the insured path without plan details, and when must they add them? The prototype lets them continue | As instructed | Ask Legion |
+| 100 | The Medicare or Medicaid question is asked again at the top of Insurance whenever About you recorded "Not sure", whatever payment path the patient then picks. "Yes" shows the same note and the same next-steps screen as About you. "Still not sure" continues, with a line saying it's confirmed at verification, and keeps the reminder flag | Legion can't see Medicare or Medicaid patients on any payment path | `insurance/page.tsx` |
+| 101 | The question names "Medicare Advantage or a Medicaid health plan" as examples of plans through either one | Patients often don't know their plan runs through Medicare or Medicaid; generic terms, not facts about Legion | `insurance/page.tsx` |
+| 102 | `eligibility.checked` can now fire on two steps and carries `on_step` (about or insurance) | The coverage check can be confirmed on Insurance | `schema.ts` |
+| 103 | No verification is faked. The insured section says "We don't check it here: your coverage is confirmed after you book", and the not sure path says "you can add your insurance later" | As instructed; "later" doesn't promise a specific step | `insurance/page.tsx` |
+| 104 | Member and group IDs are kept in the session store only, never in events, and the inputs turn off autocomplete and spellcheck | No PII in events; browsers shouldn't store or send IDs to spellcheck services | `insurance/page.tsx` |
+| 105 | The Match stub's "Choose a sample clinician" stores a sample clinician and fires no match events | Keeps the funnel clean until slice 5 | `match/page.tsx` |
+| 106 | `/account` is a placeholder that says nothing has been booked or charged | Cost and terms needs a next step | Replaced in slice 6 |
+| 107 | No time slot is chosen yet, so `reservation.requested` and the availability check at booking are not fired. They arrive with Match (time choice) and Payment | The decision on where availability is checked (#13) still stands | Slices 5 and 6 |
+| 108 | `ai.explanation_shown` no longer has a cost_summary kind, since `cost_summary.shown` replaces it | One event per meaning | `schema.ts`, `docs/PRD.md` |
+| 109 | Fixed a bug found in testing: when "Yes" to Medicare or Medicaid hid the payment question, that hidden question still blocked Continue | Caught by the flagged Medicare browser test | `insurance/page.tsx` |

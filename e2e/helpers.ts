@@ -1,0 +1,49 @@
+import { expect, type Page } from "@playwright/test";
+
+export interface Answers {
+  texas: "Yes" | "No";
+  dob: { month: string; day: string; year: string };
+  coverage: "Yes" | "No" | "Not sure";
+}
+
+export const ADULT_DOB = { month: "4", day: "15", year: "1990" };
+export const MINOR_DOB = { month: "1", day: "1", year: String(new Date().getFullYear() - 16) };
+export const ELIGIBLE: Answers = { texas: "Yes", dob: ADULT_DOB, coverage: "No" };
+
+export async function startFlow(page: Page) {
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/start$/);
+  await page.getByRole("link", { name: "Get started" }).click();
+  await expect(page.getByRole("heading", { name: "A little about you" })).toBeVisible();
+}
+
+export async function answerAbout(page: Page, answers: Answers) {
+  await page.getByRole("group", { name: /Texas/ }).getByLabel(answers.texas, { exact: true }).check();
+  await page.getByLabel("Month").fill(answers.dob.month);
+  await page.getByLabel("Day").fill(answers.dob.day);
+  await page.getByLabel("Year").fill(answers.dob.year);
+  await page
+    .getByRole("group", { name: /Medicare or Medicaid/ })
+    .getByLabel(answers.coverage, { exact: true })
+    .check();
+  await page.getByRole("button", { name: "Continue" }).click();
+}
+
+export type Envelope = { event: string; step: string; session_id: string; device_type: string; properties: Record<string, unknown> };
+
+export async function events(page: Page): Promise<Envelope[]> {
+  return page.evaluate(() => (window as unknown as { __legionEvents?: Envelope[] }).__legionEvents ?? []);
+}
+
+
+/** Chooses a payment path on Insurance and continues. */
+export async function choosePath(page: Page, label: "I have insurance" | "I'll pay without insurance" | "I'm not sure yet") {
+  await expect(page.getByRole("heading", { name: "How would you like to pay?" })).toBeVisible();
+  await page.getByLabel(label, { exact: true }).check();
+  await page.getByRole("button", { name: "Continue" }).click();
+}
+
+/** The test-only model stand-in reads this cookie: ok, fail, slow, or invalid (an invented price). */
+export async function setModel(page: Page, mode: "ok" | "fail" | "slow" | "invalid") {
+  await page.context().addCookies([{ name: "ai_mock", value: mode, url: "http://localhost:3100" }]);
+}
