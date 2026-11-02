@@ -5,10 +5,8 @@ import { useState } from "react";
 import { getTracker } from "@/analytics/client";
 import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { RadioQuestion } from "@/components/form";
-import { ReflectBack } from "@/components/ReflectBack";
 import { CrisisPanel } from "@/components/safety";
-import { LoadingScreen, PrimaryButton, Progress, Screen, TextLink } from "@/components/ui";
-import { conditionTopics } from "@/facts";
+import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, barPrimary } from "@/components/ui";
 import { AFTER_SAFETY } from "@/journey";
 import { updateAnswers, useAnswers, type SafetyAnswer, type SessionAnswers } from "@/session/store";
 
@@ -29,8 +27,6 @@ function SafetyForm({ answers }: { answers: SessionAnswers }) {
   const router = useRouter();
   const [recentThoughts, setRecentThoughts] = useState(answers.safety?.recentThoughts);
   const [hospitalized, setHospitalized] = useState(answers.safety?.hospitalized);
-  const conditions = answers.conditions ?? { topics: [], unsure: false, skipped: true };
-  const labels = conditionTopics.value.filter((t) => conditions.topics.includes(t.id)).map((t) => t.label);
 
   // Any answer other than "no" on a safety question expands the crisis panel under it
   // and records an escalation. The answer itself is never sent, only that help was shown.
@@ -58,15 +54,6 @@ function SafetyForm({ answers }: { answers: SessionAnswers }) {
 
   return (
     <Screen>
-      <ReflectBack
-        input={{
-          step: "conditions",
-          topics: labels,
-          unsure: conditions.unsure,
-          skipped: conditions.skipped,
-          freeText: conditions.freeText,
-        }}
-      />
       <Progress step="safety" />
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">Two questions about your safety</h1>
@@ -96,10 +83,11 @@ function SafetyForm({ answers }: { answers: SessionAnswers }) {
           note={hospitalized === "yes" && <CrisisPanel variant="gentle" />}
         />
 
-        <div className="flex flex-col items-start gap-4">
-          <PrimaryButton type="submit">Continue</PrimaryButton>
-          <TextLink href="/conditions">Back</TextLink>
-        </div>
+        <ActionBar backHref="/conditions">
+          <PrimaryButton type="submit" className={barPrimary}>
+            Continue
+          </PrimaryButton>
+        </ActionBar>
       </form>
     </Screen>
   );

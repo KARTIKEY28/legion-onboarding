@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { getTracker } from "@/analytics/client";
 import { useTrackOnce } from "@/analytics/hooks";
+import { Chip } from "@/components/form";
 import { CheckOption, CrisisPanel, SafeFreeText } from "@/components/safety";
-import { LoadingScreen, PrimaryButton, Progress, Screen, TextLink } from "@/components/ui";
+import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, barPrimary } from "@/components/ui";
 import { conditionTopics, type TopicId } from "@/facts";
 import { localSafetyCheck } from "@/safety/local";
 import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
@@ -81,23 +82,27 @@ function ConditionsForm({ initial }: { initial: SessionAnswers["conditions"] }) 
       </div>
 
       <form noValidate onSubmit={submit} className="flex flex-col gap-6">
-        <fieldset className="flex flex-col gap-2" aria-describedby={error ? "conditions-error" : undefined}>
+        <fieldset className="flex flex-col gap-3" aria-describedby={error ? "conditions-error" : undefined}>
           <legend className="sr-only">Topics</legend>
           {error && (
             <p id="conditions-error" role="alert" className="text-danger">
               {error}
             </p>
           )}
-          {conditionTopics.value.map((topic) => (
-            <CheckOption
-              key={topic.id}
-              label={topic.label}
-              checked={topics.includes(topic.id)}
-              onChange={(checked) => toggleTopic(topic.id, checked)}
-            />
-          ))}
-          <CheckOption label="Something else, in my own words" checked={ownWords} onChange={setOwnWords} />
-          <CheckOption label="I'm not sure" checked={unsure} onChange={toggleUnsure} />
+          <div className="flex flex-wrap gap-2 sm:grid sm:grid-cols-2">
+            {conditionTopics.value.map((topic) => (
+              <Chip
+                key={topic.id}
+                label={topic.label}
+                selected={topics.includes(topic.id)}
+                onToggle={() => toggleTopic(topic.id, !topics.includes(topic.id))}
+              />
+            ))}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <CheckOption label="Something else, in my own words" checked={ownWords} onChange={setOwnWords} />
+            <CheckOption label="I'm not sure" checked={unsure} onChange={toggleUnsure} />
+          </div>
         </fieldset>
 
         {ownWords && (
@@ -113,13 +118,18 @@ function ConditionsForm({ initial }: { initial: SessionAnswers["conditions"] }) 
         )}
         {panelShown && !ownWords && <CrisisPanel ref={panelRef} />}
 
-        <div className="flex flex-col items-start gap-4">
-          <PrimaryButton type="submit">Continue</PrimaryButton>
-          <button type="button" onClick={() => finish(true)} className="text-accent underline underline-offset-2">
+        <ActionBar backHref="/about">
+          <PrimaryButton type="submit" className={barPrimary}>
+            Continue
+          </PrimaryButton>
+          <button
+            type="button"
+            onClick={() => finish(true)}
+            className="self-center text-accent underline underline-offset-2 md:self-auto"
+          >
             Skip for now
           </button>
-          <TextLink href="/about">Back</TextLink>
-        </div>
+        </ActionBar>
       </form>
     </Screen>
   );

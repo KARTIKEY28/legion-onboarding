@@ -14,7 +14,7 @@ import {
 } from "@/clinicians/model";
 import { RadioQuestion } from "@/components/form";
 import { CheckOption, CrisisPanel, SafeFreeText } from "@/components/safety";
-import { LoadingScreen, PrimaryButton, Progress, Screen, TextLink } from "@/components/ui";
+import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, barPrimary } from "@/components/ui";
 import { localSafetyCheck } from "@/safety/local";
 import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
 
@@ -121,10 +121,11 @@ function NeedsForm({ initial }: { initial: SessionAnswers["needs"] }) {
         />
         {panelShown && !note.trim() && <CrisisPanel ref={panelRef} />}
 
-        <div className="flex flex-col items-start gap-4">
-          <PrimaryButton type="submit">Continue</PrimaryButton>
-          <TextLink href="/insurance">Back</TextLink>
-        </div>
+        <ActionBar backHref="/insurance">
+          <PrimaryButton type="submit" className={barPrimary}>
+            Continue
+          </PrimaryButton>
+        </ActionBar>
       </form>
     </Screen>
   );

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { ADULT_DOB, ELIGIBLE, MINOR_DOB, answerAbout, events, startFlow } from "./helpers";
+import { ELIGIBLE, MINOR_DOB, answerAbout, events, startFlow } from "./helpers";
 
 test("happy path: eligible patient reaches Conditions", async ({ page }) => {
   await startFlow(page);
@@ -26,7 +26,7 @@ test("happy path: eligible patient reaches Conditions", async ({ page }) => {
 
   // Nobody is asked twice: going back shows the saved answers.
   await page.goto("/about");
-  await expect(page.getByLabel("Year")).toHaveValue("1990");
+  await expect(page.getByLabel("Date of birth")).toHaveValue("04/15/1990");
   await expect(page.getByRole("group", { name: /Texas/ }).getByLabel("Yes", { exact: true })).toBeChecked();
 });
 
@@ -80,7 +80,7 @@ test("no event contains personal data", async ({ page }) => {
   expect(fired.length).toBeGreaterThan(0);
   // Session ids and timestamps are random or dated, so check everything else.
   const serialized = JSON.stringify(fired.map(({ event, step, device_type, properties }) => ({ event, step, device_type, properties })));
-  for (const forbidden of [email, "@", ADULT_DOB.year, "dob", "birth"]) {
+  for (const forbidden of [email, "@", "1990", "04/15", "dob", "birth"]) {
     expect(serialized, `events must not contain "${forbidden}"`).not.toContain(forbidden);
   }
   for (const event of fired) {

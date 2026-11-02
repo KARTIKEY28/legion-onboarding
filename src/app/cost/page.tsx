@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { templateCost, type CostPath, type CostSummary } from "@/ai/cost";
-import { LoadingScreen, PrimaryLink, Progress, Screen, TextLink } from "@/components/ui";
+import { ActionBar, LoadingScreen, PrimaryLink, Progress, Screen, barPrimary } from "@/components/ui";
 import { getAnswers, updateAnswers, useAnswers } from "@/session/store";
 
 const CLIENT_TIMEOUT_MS = 3000;
@@ -99,10 +99,11 @@ function CostScreen({ path, clinician }: { path: CostPath; clinician?: string })
         <p className="text-sm text-ink-muted">Every amount here comes from a fixed price list and is checked before it&apos;s shown.</p>
       </div>
 
-      <div className="flex flex-col items-start gap-4">
-        <PrimaryLink href="/account">Continue to create your account</PrimaryLink>
-        <TextLink href="/match">Back</TextLink>
-      </div>
+      <ActionBar backHref="/match">
+        <PrimaryLink href="/account" className={barPrimary}>
+          Continue to create your account
+        </PrimaryLink>
+      </ActionBar>
     </Screen>
   );
 }

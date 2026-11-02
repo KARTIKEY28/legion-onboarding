@@ -39,9 +39,16 @@ export interface Clinician {
   languages: LanguageId[];
   gender: ClinicianGender;
   availability: AvailabilityWindow[];
+  /** Synthetic plan ids (from samplePayers) this clinician accepts. All accept self pay. */
+  acceptedPayers: string[];
   /** A short first-person line, shown as written by the clinician. */
   bio: string;
   /** Evidence tiers 2 and 3. Always labeled illustrative in the prototype. */
   experience?: { similarPatients: number; illustrative: true };
   outcomes?: { measure: string; cohortSize: number; improvedShare: number; illustrative: true };
+  /** Synthetic edge case: no open slots in the next 14 days, so never a strong match. */
+  fullyBooked?: boolean;
 }
+
+/** Outcomes are only shown (evidence tier 3) when the cohort is at least this large. */
+export const MIN_OUTCOME_COHORT = 30;
