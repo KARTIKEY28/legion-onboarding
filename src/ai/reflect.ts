@@ -24,6 +24,14 @@ export const reflectInputSchema = z.discriminatedUnion("step", [
     gender: z.string().max(40).optional(),
     note: z.string().max(1000).optional(),
   }),
+  // The Match headline: ties the patient's answers to what we searched for.
+  z.object({
+    step: z.literal("match"),
+    topics: z.array(z.string().max(80)).max(20),
+    windows: z.array(z.string().max(40)).max(10),
+    language: z.string().max(40).optional(),
+    payer: z.string().max(80).optional(),
+  }),
 ]);
 
 export type ReflectInput = z.infer<typeof reflectInputSchema>;
@@ -55,6 +63,14 @@ export function templateReflection(input: ReflectInput): string {
     if (input.unsure) return `You're not sure yet what to call it, and that's okay.${shared}`;
     return shared ? "Thanks for putting it in your own words." : "You chose to skip this for now, and that's okay.";
   }
+  if (input.step === "match") {
+    const bits: string[] = [];
+    if (input.topics.length) bits.push(`who work with ${list(input.topics)}`);
+    if (input.windows.length) bits.push(`with ${list(input.windows)} openings`);
+    if (input.language) bits.push(`who speak ${input.language}`);
+    if (input.payer) bits.push(`who take ${input.payer}`);
+    return bits.length ? `Clinicians ${bits.join(", ")}.` : "Clinicians who could be a good fit for you.";
+  }
   const parts: string[] = [];
   if (input.language) parts.push(`who speaks ${input.language}`);
   if (input.gender) parts.push(`who is a ${input.gender.toLowerCase()}`);
@@ -66,15 +82,17 @@ export function templateReflection(input: ReflectInput): string {
 
 const BANNED = /\b(diagnos\w*|disorder|syndrome|you should|you need to|try|recommend\w*|treatment|medication|cure)\b/i;
 
-/** A model line is only used if it is one short sentence about the patient, with no numbers or advice. */
-export function isAcceptableReflection(text: string): boolean {
+/** A model line is only used if it is one short sentence, with no numbers or advice. */
+export function isAcceptableReflection(text: string, step: ReflectInput["step"] = "conditions"): boolean {
   const line = text.trim();
+  // Match headlines start with "Clinicians"; reflect-back lines start with "You".
+  const prefix = step === "match" ? /^clinicians\b/i : /^you\b/i;
   return (
     line.length > 0 &&
     line.length <= 180 &&
     !/[\n\r]/.test(line) &&
     !/\d/.test(line) &&
-    /^you\b/i.test(line) &&
+    prefix.test(line) &&
     !BANNED.test(line)
   );
 }
@@ -85,7 +103,9 @@ export function prepareForModel(input: ReflectInput): ReflectInput {
     if (!text?.trim() || localSafetyCheck(text).concern) return undefined;
     return removeIdentifiers(text);
   };
-  return input.step === "conditions" ? { ...input, freeText: clean(input.freeText) } : { ...input, note: clean(input.note) };
+  if (input.step === "conditions") return { ...input, freeText: clean(input.freeText) };
+  if (input.step === "needs") return { ...input, note: clean(input.note) };
+  return input; // match: only labels, nothing to redact
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -113,7 +133,7 @@ export async function reflectBack(
   if (!writer) return template;
   try {
     const text = (await withTimeout(writer.write(prepareForModel(input)), timeoutMs)).trim();
-    return isAcceptableReflection(text) ? { text, source: "model" } : template;
+    return isAcceptableReflection(text, input.step) ? { text, source: "model" } : template;
   } catch {
     return template;
   }

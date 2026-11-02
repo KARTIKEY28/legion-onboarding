@@ -52,9 +52,21 @@ function costFacts(path: CostPath): string {
   return facts.map((f) => `- ${f}`).join("\n");
 }
 
+const MATCH_SYSTEM = `You write one short, warm headline for a page of clinician matches, using ONLY the facts given.
+Rules:
+- Use only what is given. Do not add details or invent anything.
+- Never diagnose or name a condition that is not in the list.
+- No numbers. Plain words a 12-year-old would understand. At most 25 words.
+- Start with "Clinicians".
+Reply with the headline only.`;
+
 const SAFETY_SYSTEM = `You screen short text written by a person signing up for mental health care.
 Does the text suggest any risk of suicide, self-harm, harm to others, or that the person is in danger now?
 Answer with exactly one word: YES, NO, or UNSURE.`;
+
+function systemFor(step: ReflectInput["step"]): string {
+  return step === "match" ? MATCH_SYSTEM : REFLECT_SYSTEM;
+}
 
 function describe(input: ReflectInput): string {
   if (input.step === "conditions") {
@@ -62,6 +74,16 @@ function describe(input: ReflectInput): string {
       `Topics they chose: ${input.topics.join("; ") || "none"}`,
       `Not sure what it is: ${input.unsure ? "yes" : "no"}`,
       input.freeText ? `In their own words: ${input.freeText}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+  if (input.step === "match") {
+    return [
+      `Topics we looked for: ${input.topics.join("; ") || "any"}`,
+      `Times we looked for: ${input.windows.join("; ") || "any"}`,
+      `Language: ${input.language || "no preference"}`,
+      input.payer ? `Plan: ${input.payer}` : "",
     ]
       .filter(Boolean)
       .join("\n");
@@ -101,7 +123,7 @@ export function createModel(): (ReflectionWriter & SafetyClassifier & CostWriter
   if (!process.env.ANTHROPIC_API_KEY) return null;
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   return {
-    write: (input) => ask(client, REFLECT_SYSTEM, describe(input), REFLECT_TIMEOUT_MS),
+    write: (input) => ask(client, systemFor(input.step), describe(input), REFLECT_TIMEOUT_MS),
     writeCost: (path) => ask(client, COST_SYSTEM, costFacts(path), REFLECT_TIMEOUT_MS),
     mayIndicateRisk: async (text) => {
       const answer = (await ask(client, SAFETY_SYSTEM, text, REFLECT_TIMEOUT_MS)).toUpperCase();

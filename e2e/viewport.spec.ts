@@ -32,9 +32,9 @@ test("the primary action is in the viewport at every step (390x844)", async ({ p
   await expect(page.getByRole("button", { name: "Continue" })).toBeInViewport();
   await page.getByRole("button", { name: "Continue" }).click();
 
+  // Match is a selection list (no single primary action): pick the first open time.
   await expect(page).toHaveURL(/\/match$/);
-  await expect(page.getByRole("button", { name: "Choose a sample clinician" })).toBeInViewport();
-  await page.getByRole("button", { name: "Choose a sample clinician" }).click();
+  await page.getByRole("article").first().getByRole("button", { name: /AM|PM/ }).first().click();
 
   await expect(page.getByText("Step 8 of 10 · Cost and terms")).toBeVisible();
   await expect(page.getByRole("link", { name: "Continue to create your account" })).toBeInViewport();

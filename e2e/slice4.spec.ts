@@ -17,8 +17,9 @@ async function toInsurance(page: Page, about: Answers = ELIGIBLE) {
 async function toCost(page: Page) {
   await expect(page.getByText("Step 6 of 10 · Needs")).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByText(/Temporary stub/)).toBeVisible();
-  await page.getByRole("button", { name: "Choose a sample clinician" }).click();
+  await expect(page.getByText("Step 7 of 10 · Match")).toBeVisible();
+  // Pick the first open time on the top match to reach Cost and terms.
+  await page.getByRole("article").first().getByRole("button", { name: /AM|PM/ }).first().click();
   await expect(page.getByText("Step 8 of 10 · Cost and terms")).toBeVisible();
 }
 

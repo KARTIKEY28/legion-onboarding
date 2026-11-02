@@ -13,10 +13,12 @@ type Model = ReflectionWriter & SafetyClassifier & CostWriter;
 function mockModel(mode: string): Model {
   const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
   return {
-    async write() {
+    async write(input) {
       if (mode === "fail") throw new Error("mock model unavailable");
       if (mode === "slow") await delay(4000);
-      return "You shared what has been on your mind, in your own way.";
+      return input.step === "match"
+        ? "Clinicians who could be a good fit for what you shared."
+        : "You shared what has been on your mind, in your own way.";
     },
     async writeCost(path) {
       if (mode === "fail") throw new Error("mock model unavailable");

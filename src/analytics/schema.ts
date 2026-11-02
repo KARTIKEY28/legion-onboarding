@@ -100,13 +100,14 @@ export const EVENTS = {
 
   // Match
   "match.viewed": event("match", {
-    options_shown: count,
-    strong_match: z.boolean(),
+    match_count: count,
+    no_strong_match: z.boolean(),
   }),
   "match.full_list_opened": event("match"),
   "match.none_selected": event("match"),
+  // The clinician's name is never sent; rank and tier only, so it can't be joined to patient data
   "provider.selected": event("match", {
-    options_viewed: count,
+    from: z.enum(["top_match", "full_list"]),
     rank: count,
     evidence_tier: z.enum(["declared_fit", "experience", "outcomes"]),
   }),
@@ -139,7 +140,7 @@ export const EVENTS = {
   "payment.succeeded": event("payment"),
 
   // The slot was booked by someone else by the time this patient tried to book it
-  "slot.unavailable_at_booking": anyStepEvent(["cost", "payment"], {}),
+  "slot.unavailable_at_booking": anyStepEvent(["match", "cost", "payment"], {}),
 
   // Post payment, planned for a later build
   "visit.booked": event("visit"),
@@ -156,7 +157,7 @@ export const EVENTS = {
     source: z.enum(["button"]),
   }),
   // A reflect-back line was shown. on_step is the step whose answers it reflects
-  "reflect_back.shown": anyStepEvent(["conditions", "needs"], {
+  "reflect_back.shown": anyStepEvent(["conditions", "needs", "match"], {
     source: z.enum(["model", "template"]),
   }),
   "ai.explanation_shown": anyStepEvent(STEPS, {
