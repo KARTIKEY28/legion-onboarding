@@ -138,12 +138,28 @@ export const EVENTS = {
   // Payment
   "payment.viewed": event("payment"),
   "payment.succeeded": event("payment"),
+  // The booking failed. The reason is a code only, never card data or amounts
+  "payment.failed": event("payment", {
+    reason: z.enum(["card_declined", "authentication_required", "processing_error"]),
+  }),
 
   // The slot was booked by someone else by the time this patient tried to book it
   "slot.unavailable_at_booking": anyStepEvent(["match", "cost", "payment"], {}),
 
-  // Post payment, planned for a later build
+  // Post payment (slice 7, the author's design proposal). All step "visit";
+  // never any PII, free text or health answer, only states, counts and booleans.
   "visit.booked": event("visit"),
+  "confirmation.viewed": event("visit"),
+  "intake.started": event("visit"),
+  "intake.completed": event("visit"),
+  "id.uploaded": event("visit", { uploaded: z.boolean() }),
+  "records.consent": event("visit", { granted: z.boolean() }),
+  "insurance.status_viewed": event("visit", {
+    state: z.enum(["checking", "confirmed", "more_info", "self_pay"]),
+  }),
+  "summary.shown": event("visit", { source: z.enum(["model", "template"]) }),
+  "summary.edited": event("visit", { edited: z.boolean() }),
+  "visit.joined": event("visit"),
   "visit.completed": event("visit"),
 
   // Cross-cutting

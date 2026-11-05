@@ -57,7 +57,7 @@ test("account: email is prefilled, DOB is read-only with Edit, no password, crea
   await page.getByRole("button", { name: "Continue to payment" }).click();
 
   await expect(page).toHaveURL(/\/payment$/);
-  await expect(page.getByText(/Nothing has been booked or charged/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Book my visit" })).toBeVisible();
 
   const fired = await events(page);
   expect(fired.filter((e) => e.event === "account.viewed")).toHaveLength(1);
