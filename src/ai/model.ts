@@ -4,6 +4,8 @@ import { cancellation, cardTerms, selfPayPrices } from "@/facts";
 import type { CostPath, CostWriter } from "./cost";
 import type { ReflectInput, ReflectionWriter } from "./reflect";
 import { REFLECT_TIMEOUT_MS } from "./reflect";
+import type { SummaryWriter } from "./previsit";
+import { SUMMARY_TIMEOUT_MS } from "./previsit";
 
 /**
  * Server-only access to the model. The API key comes only from the
@@ -59,6 +61,14 @@ Rules:
 - No numbers. Plain words a 12-year-old would understand. At most 25 words.
 - Start with "Clinicians".
 Reply with the headline only.`;
+
+const SUMMARY_SYSTEM = `You help a patient tell their own story to their clinician before a first mental health visit.
+Write a short, warm first-person paragraph ("I ...") using ONLY the facts given.
+Rules:
+- Use only what is given. Do not add details, feelings, causes, dates, names or numbers they did not state.
+- Never diagnose, never name a condition that is not listed, never give advice or suggest treatment.
+- Plain words a 12-year-old would understand. At most 5 short sentences.
+Reply with the paragraph only.`;
 
 const SAFETY_SYSTEM = `You screen short text written by a person signing up for mental health care.
 Does the text suggest any risk of suicide, self-harm, harm to others, or that the person is in danger now?
@@ -119,12 +129,13 @@ async function ask(client: Anthropic, system: string, text: string, timeoutMs: n
     .trim();
 }
 
-export function createModel(): (ReflectionWriter & SafetyClassifier & CostWriter) | null {
+export function createModel(): (ReflectionWriter & SafetyClassifier & CostWriter & SummaryWriter) | null {
   if (!process.env.ANTHROPIC_API_KEY) return null;
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   return {
     write: (input) => ask(client, systemFor(input.step), describe(input), REFLECT_TIMEOUT_MS),
     writeCost: (path) => ask(client, COST_SYSTEM, costFacts(path), REFLECT_TIMEOUT_MS),
+    writeSummary: (facts) => ask(client, SUMMARY_SYSTEM, facts, SUMMARY_TIMEOUT_MS),
     mayIndicateRisk: async (text) => {
       const answer = (await ask(client, SAFETY_SYSTEM, text, REFLECT_TIMEOUT_MS)).toUpperCase();
       return answer.startsWith("YES") || answer.startsWith("UNSURE");
