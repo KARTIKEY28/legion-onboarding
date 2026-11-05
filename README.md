@@ -40,8 +40,14 @@ CI runs the same four checks on every push to `main` and every pull request.
 
 ## Deploy
 
-Deploys use Vercel's Git integration, so there is no deploy config in the repo.
+Deploys use Vercel's Git integration, so there is no deploy config in the repo. It runs with no
+environment variables (templates + the booking mock); set keys and flags to turn on the model,
+Stripe test mode, or feature flags.
 
-1. Push this repository to GitHub.
-2. In Vercel, choose **Add New → Project**, import the repository and keep the Next.js defaults.
-3. Every branch push then gets a preview URL, and `main` deploys to production.
+See **[docs/DEPLOY.md](docs/DEPLOY.md)** for the step-by-step: push to GitHub, import into Vercel,
+the environment-variable table, and the test cards. In short:
+
+1. `git branch -M main`, create a public GitHub repo, and push.
+2. In Vercel, **Add New → Project**, import the repository, keep the Next.js defaults, add any
+   environment variables, and deploy.
+3. Every branch push gets a preview URL; `main` deploys to production.
