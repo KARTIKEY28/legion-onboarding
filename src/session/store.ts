@@ -63,6 +63,17 @@ export interface SessionAnswers {
   reflections?: Record<string, { text: string; source: "model" | "template" }>;
   /** From a notify-me form; pre-filled at the account step. */
   notifyEmail?: string;
+  /** Whether this email already had an account (returning patient at account creation). */
+  returningPatient?: boolean;
+  /** Set once the visit is booked on the Payment step. */
+  booked?: boolean;
+  /** Slice-7 demo controls (dev only): simulated time, insurance status, forms and visit state. */
+  demo?: {
+    clock?: "far" | "48h" | "24h" | "1h" | "visit";
+    insuranceState?: "checking" | "confirmed" | "more_info";
+    formsComplete?: boolean;
+    visitComplete?: boolean;
+  };
   /** Keys of events already fired this session, so each fires once. */
   fired?: string[];
 }
