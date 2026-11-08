@@ -28,14 +28,16 @@ test("strong matches: three cards, picking a time goes to Cost, clean events", a
   await expect(cards.first()).toContainText("Illustrative");
 
   // Pick the first open time on the top card.
-  await cards.first().getByRole("button").first().click();
+  await cards.first().getByRole("button", { name: /AM|PM/ }).first().click();
   await expect(page).toHaveURL(/\/cost$/);
 
   const fired = await events(page);
   const byName = (n: string) => fired.filter((e) => e.event === n).map((e) => e.properties);
   expect(byName("match.viewed")).toEqual([{ match_count: 3, no_strong_match: false }]);
   expect(byName("reflect_back.shown")).toEqual([{ source: "template", on_step: "match" }]);
-  expect(byName("provider.selected")).toEqual([{ from: "top_match", rank: 1, evidence_tier: "outcomes" }]);
+  expect(byName("provider.selected")).toEqual([
+    { from: "top_match", source: "card", rank: 1, evidence_tier: "outcomes" },
+  ]);
 
   // No clinician name is ever in an event.
   const serialized = JSON.stringify(fired.map(({ event, properties }) => ({ event, properties })));
@@ -59,7 +61,7 @@ test("'See all clinicians' opens the full list and selecting fires from full_lis
   await expect(page.getByText("All clinicians with openings, most relevant first.")).toBeVisible();
   expect((await events(page)).filter((e) => e.event === "match.full_list_opened")).toHaveLength(1);
 
-  await page.getByRole("article").first().getByRole("button").first().click();
+  await page.getByRole("article").first().getByRole("button", { name: /AM|PM/ }).first().click();
   await expect(page).toHaveURL(/\/cost$/);
   const selected = (await events(page)).filter((e) => e.event === "provider.selected");
   expect(selected[0].properties.from).toBe("full_list");
@@ -85,13 +87,56 @@ test("no strong match: closest options shown, widening the time flips to strong 
   await expect(page.getByRole("article")).toHaveCount(3);
 });
 
+test("clinician profile: opens from the card, reflects in the URL, Escape closes it", async ({ page }) => {
+  await setModel(page, "fail");
+  await seedAndOpenMatch(page, STRONG);
+
+  const card = page.getByRole("article").first();
+  await card.getByRole("button", { name: /Open .* profile/ }).click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Why we matched you");
+  await expect(dialog).toContainText("Availability");
+  await expect(page).toHaveURL(/\?clinician=/);
+  expect((await events(page)).filter((e) => e.event === "profile.opened")).toHaveLength(1);
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(page).not.toHaveURL(/\?clinician=/);
+});
+
+test("clinician profile: the role explainer avoids prescribing claims", async ({ page }) => {
+  await setModel(page, "fail");
+  await seedAndOpenMatch(page, STRONG);
+  await page.getByRole("article").first().getByRole("button", { name: /Open .* profile/ }).click();
+  await page.getByRole("button", { name: "What's the difference?" }).click();
+  const explainer = page.getByText(/medical doctor who specializes in mental health/);
+  await expect(explainer).toBeVisible();
+  await expect(explainer).not.toContainText(/prescri/i);
+});
+
+test("clinician profile: picking a time there selects from the profile", async ({ page }) => {
+  await setModel(page, "fail");
+  await seedAndOpenMatch(page, STRONG);
+  await page.getByRole("article").first().getByRole("button", { name: /Open .* profile/ }).click();
+
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: /AM|PM/ }).first().click();
+  await expect(page).toHaveURL(/\/cost$/);
+
+  const selected = (await events(page)).filter((e) => e.event === "provider.selected");
+  expect(selected).toHaveLength(1);
+  expect(selected[0].properties.source).toBe("profile");
+});
+
 test("slot taken at booking: a calm message, the event fires, and a retry works", async ({ page }) => {
   await setModel(page, "fail");
   await page.context().addCookies([{ name: "dev_slot_taken", value: "1", url: "http://localhost:3100" }]);
   await seedAndOpenMatch(page, STRONG);
 
   const card = page.getByRole("article").first();
-  await card.getByRole("button").first().click();
+  await card.getByRole("button", { name: /AM|PM/ }).first().click();
   await expect(card.getByText(/was just taken/)).toBeVisible();
   await expect(page).not.toHaveURL(/\/cost$/);
   expect((await events(page)).filter((e) => e.event === "slot.unavailable_at_booking")).toHaveLength(1);

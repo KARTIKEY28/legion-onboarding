@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { templateCost, type CostPath, type CostSummary } from "@/ai/cost";
 import { ActionBar, LoadingScreen, PrimaryLink, Progress, Screen, TextLink, barPrimary } from "@/components/ui";
+import { Portrait } from "@/components/Portrait";
+import { formatCentral } from "@/time";
 import { getAnswers, updateAnswers, useAnswers } from "@/session/store";
 
 const CLIENT_TIMEOUT_MS = 3000;
@@ -36,8 +38,9 @@ export default function CostPage() {
   return (
     <CostScreen
       path={answers.insurance?.path ?? "not_sure"}
+      clinicianId={answers.selectedClinician?.id}
       clinician={answers.selectedClinician?.name}
-      slotLabel={answers.selectedSlot?.label}
+      slotIso={answers.selectedSlot?.iso}
     />
   );
 }
@@ -49,20 +52,34 @@ const SECTIONS = [
 ] as const;
 
 /** The clinician and time the patient picked on Match, with a link back to change it. */
-function ChosenVisit({ clinician, slotLabel }: { clinician: string; slotLabel?: string }) {
+function ChosenVisit({ clinicianId, clinician, slotIso }: { clinicianId?: string; clinician: string; slotIso?: string }) {
   return (
-    <section aria-label="Your chosen visit" className="flex flex-col gap-1 rounded-lg bg-accent-soft p-4">
-      <p className="text-sm text-ink-muted">Your first visit</p>
-      <p className="text-lg font-semibold">{clinician}</p>
-      {slotLabel && <p className="text-base">{slotLabel}</p>}
-      <TextLink href="/match" className="self-start text-sm">
-        Change
-      </TextLink>
+    <section aria-label="Your chosen visit" className="flex items-start gap-3 rounded-lg bg-accent-soft p-4">
+      {clinicianId && <Portrait id={clinicianId} name={clinician} size={48} />}
+      <div className="flex flex-col gap-1">
+        <p className="text-sm text-ink-muted">Your first visit</p>
+        <p className="text-lg font-semibold">{clinician}</p>
+        <p className="text-sm text-ink-muted">Video visit</p>
+        {slotIso && <p className="text-base">{formatCentral(slotIso)}</p>}
+        <TextLink href="/match" className="self-start text-sm">
+          Change
+        </TextLink>
+      </div>
     </section>
   );
 }
 
-function CostScreen({ path, clinician, slotLabel }: { path: CostPath; clinician?: string; slotLabel?: string }) {
+function CostScreen({
+  path,
+  clinicianId,
+  clinician,
+  slotIso,
+}: {
+  path: CostPath;
+  clinicianId?: string;
+  clinician?: string;
+  slotIso?: string;
+}) {
   const [summary, setSummary] = useState<CostSummary | null>(() => getAnswers().costSummaries?.[path] ?? null);
   useTrackOnce("cost.viewed", "cost.viewed", () => ({ insurance_path: path }));
 
@@ -98,7 +115,7 @@ function CostScreen({ path, clinician, slotLabel }: { path: CostPath; clinician?
         <p className="text-ink-muted">Here&apos;s everything before you create an account or add a card.</p>
       </div>
 
-      {clinician && <ChosenVisit clinician={clinician} slotLabel={slotLabel} />}
+      {clinician && <ChosenVisit clinicianId={clinicianId} clinician={clinician} slotIso={slotIso} />}
 
       <div aria-busy={!summary} aria-live="polite" className="flex flex-col gap-4">
         {SECTIONS.map(({ key, heading }) => (

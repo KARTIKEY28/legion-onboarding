@@ -25,8 +25,12 @@ export default function RootLayout({
         <CrisisHelp />
         <DevLabel />
         <div className="flex-1">{children}</div>
-        <footer className="border-t border-line px-4 py-4 text-center text-sm text-ink-muted">
-          Prototype with synthetic data. Please don&apos;t enter real health information.
+        <footer className="flex flex-col gap-1 border-t border-line px-4 py-4 text-center text-sm text-ink-muted">
+          <p>Prototype with synthetic data. Please don&apos;t enter real health information.</p>
+          <p className="text-xs">
+            Clinician portraits are illustrations generated with DiceBear (MIT), style &ldquo;personas&rdquo; by
+            Draftbit (CC0). Not photos of real people.
+          </p>
         </footer>
       </body>
     </html>
