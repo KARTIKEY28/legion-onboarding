@@ -1,8 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 import { ELIGIBLE, answerAbout, choosePath, events, setModel, startFlow, type Answers } from "./helpers";
 
-const INSURED_PAY =
-  "Without insurance, the visit is $250 for the first visit and $150 for follow ups. With insurance, your cost is confirmed after we verify your coverage.";
+// The personalized "What you pay" copy (Part 4). Prices come from the facts.
+const SELF_PAY = "Your first visit is $250. Follow ups are $150.";
+const INSURED_GENERIC =
+  "Your cost is confirmed after we verify your coverage. If your plan doesn't cover the visit, it's $250 without insurance.";
+const insuredNamed = (plan: string) => `You chose ${plan}${plan.endsWith(".") ? "" : "."} ${INSURED_GENERIC}`;
 
 /** About you, then skip Conditions and continue past Safety, arriving on Insurance. */
 async function toInsurance(page: Page, about: Answers = ELIGIBLE) {
@@ -39,8 +42,8 @@ test("insured path: details are asked, nothing is verified, and the cost uses th
   await fillInsured(page);
   await toCost(page);
 
-  await expect(page.getByTestId("cost-pay")).toHaveText(INSURED_PAY);
-  await expect(page.getByTestId("cost-pay")).toHaveAttribute("data-source", "model");
+  await expect(page.getByTestId("cost-pay")).toHaveText(insuredNamed("Sample Insurance Co."));
+  await expect(page.getByTestId("cost-pay")).toHaveAttribute("data-source", "personalized");
   await expect(page.getByTestId("cost-charged")).toContainText("$1 authorization");
   await expect(page.getByTestId("cost-cancel")).toContainText("48 hours");
   await expect(page.getByRole("link", { name: "Continue to create your account" })).toBeVisible();
@@ -74,8 +77,8 @@ test("self pay path: no insurance fields, straight on, self pay prices", async (
   await expect(page.getByLabel("Member ID")).toHaveCount(0);
   await page.getByRole("button", { name: "Continue" }).click();
   await toCost(page);
-  await expect(page.getByTestId("cost-pay")).toHaveText("Your first visit is $250. Follow-up visits are $150 each.");
-  await expect(page.getByTestId("cost-pay")).toHaveAttribute("data-source", "template");
+  await expect(page.getByTestId("cost-pay")).toHaveText(SELF_PAY);
+  await expect(page.getByTestId("cost-pay")).toHaveAttribute("data-source", "personalized");
   const fired = await events(page);
   expect(fired.filter((e) => e.event === "insurance.submitted").map((e) => e.properties)).toEqual([{ path: "self_pay" }]);
   expect(fired.filter((e) => e.event === "cost_summary.shown").map((e) => e.properties)).toEqual([{ source: "template" }]);
@@ -85,7 +88,9 @@ test("not sure path: continues, and the cost uses the insured wording", async ({
   await toInsurance(page);
   await choosePath(page, "I'm not sure yet");
   await toCost(page);
-  await expect(page.getByTestId("cost-pay")).toHaveText(INSURED_PAY);
+  // Not sure shows both paths, insured first.
+  await expect(page.getByTestId("cost-pay")).toContainText(INSURED_GENERIC);
+  await expect(page.getByTestId("cost-pay")).toContainText(SELF_PAY);
   const submitted = (await events(page)).filter((e) => e.event === "insurance.submitted");
   expect(submitted.map((e) => e.properties)).toEqual([{ path: "not_sure" }]);
 });
@@ -115,8 +120,9 @@ test("a summary with an invented price is rejected and the template is shown", a
   await toInsurance(page);
   await choosePath(page, "I'm not sure yet");
   await toCost(page);
-  await expect(page.getByTestId("cost-pay")).toHaveText(INSURED_PAY);
-  await expect(page.getByTestId("cost-pay")).toHaveAttribute("data-source", "template");
+  // The personalized pay copy is unaffected; the rejected model summary falls back to the template.
+  await expect(page.getByTestId("cost-pay")).toContainText(SELF_PAY);
+  await expect(page.getByTestId("cost-charged")).toHaveAttribute("data-source", "template");
   await expect(page.getByText(/199/)).toHaveCount(0);
   const fired = await events(page);
   expect(fired.filter((e) => e.event === "cost_summary.validation_failed").map((e) => e.properties)).toEqual([

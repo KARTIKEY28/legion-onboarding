@@ -3,12 +3,36 @@ import {
   costSummary,
   extractQuantities,
   parseCostOutput,
+  personalizedPay,
   templateCost,
   validateCost,
   wordsToDigits,
   type CostSections,
   type CostWriter,
 } from "./cost";
+
+describe("personalized pay", () => {
+  it("self pay shows the self-pay prices only", () => {
+    expect(personalizedPay("self_pay")).toEqual(["Your first visit is $250. Follow ups are $150."]);
+  });
+
+  it("insured with a plan names the plan and the self-pay floor", () => {
+    expect(personalizedPay("insured", "Sample Insurance Co.")).toEqual([
+      "You chose Sample Insurance Co. Your cost is confirmed after we verify your coverage. If your plan doesn't cover the visit, it's $250 without insurance.",
+    ]);
+  });
+
+  it("not sure shows both paths, insured first", () => {
+    const lines = personalizedPay("not_sure");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toContain("confirmed after we verify your coverage");
+    expect(lines[1]).toBe("Your first visit is $250. Follow ups are $150.");
+  });
+
+  it("insured but adding the plan later is treated like not sure", () => {
+    expect(personalizedPay("insured", undefined, true)).toEqual(personalizedPay("not_sure"));
+  });
+});
 
 const good: CostSections = {
   pay: "Without insurance, your first visit is $250 and follow ups are $150. With insurance, we confirm your cost after checking your coverage.",
