@@ -51,6 +51,27 @@ export function templateCost(path: CostPath): CostSections {
   };
 }
 
+/**
+ * The personalized "What you pay" lines, built deterministically from the
+ * patient's insurance path and chosen plan (prices from facts, never literals).
+ * The model is not used here: it never sees the plan, which is why personalizing
+ * this from the summary never took effect. Returns one or two paragraphs.
+ *   - self pay: the self-pay prices.
+ *   - insured with a named plan: names the plan, coverage verified, self-pay floor.
+ *   - not sure, or insured with the plan added later: both paths, insured first.
+ */
+export function personalizedPay(path: CostPath, plan?: string, addLater?: boolean): string[] {
+  const selfPayLine = `Your first visit is $${initial}. Follow ups are $${followUp}.`;
+  const insuredNamed = (name: string) =>
+    `You chose ${name}${name.endsWith(".") ? "" : "."} Your cost is confirmed after we verify your coverage. If your plan doesn't cover the visit, it's $${initial} without insurance.`;
+  const insuredGeneric = `Your cost is confirmed after we verify your coverage. If your plan doesn't cover the visit, it's $${initial} without insurance.`;
+
+  if (path === "self_pay") return [selfPayLine];
+  if (path === "insured" && plan && !addLater) return [insuredNamed(plan)];
+  // not sure, or insured with the plan still to be added: show both, insured first.
+  return [insuredGeneric, selfPayLine];
+}
+
 // ---- Number extraction ----
 
 const UNITS: Record<string, string> = { one: "1", two: "2", three: "3", four: "4", five: "5", six: "6", seven: "7", eight: "8", nine: "9", ten: "10", eleven: "11", twelve: "12", thirteen: "13", fourteen: "14", fifteen: "15", sixteen: "16", seventeen: "17", eighteen: "18", nineteen: "19" };
