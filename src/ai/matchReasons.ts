@@ -75,6 +75,23 @@ export function profileExperienceLine(c: Clinician): string | null {
   return `Illustrative: has worked with about ${c.experience.similarPatients} patients with concerns like these.`;
 }
 
+/** The card reasons, expanded to one full sentence each, for the profile. */
+export function profileReasons(facts: MatchReasonFacts): string[] {
+  const out: string[] = [];
+  if (facts.matchedTopicIds.length) {
+    out.push(
+      `They focus on ${joinPhrases(facts.matchedTopicIds.map((id) => concernPhrase[id]))}, which you told us about.`,
+    );
+  }
+  if (facts.windows.length) {
+    out.push(`They have ${joinPhrases(facts.windows.map((w) => windowWord[w]))} openings, matching when you're free.`);
+  }
+  if (facts.payer) out.push(`They take ${facts.payer}, the plan you gave us.`);
+  if (facts.language) out.push(`They speak ${languagePhrase[facts.language]}, the language you asked for.`);
+  if (facts.gender) out.push(`They're ${genderPhrase[facts.gender]}, which you preferred.`);
+  return out;
+}
+
 /**
  * True if every number in the lines is one the clinician's record supports, and
  * every concern named maps to one of the clinician's specialties.

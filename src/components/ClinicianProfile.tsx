@@ -1,0 +1,247 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { profileExperienceLine, profileOutcomeLine, profileReasons } from "@/ai/matchReasons";
+import { evidenceTier, type MatchInput } from "@/clinicians/match";
+import type { Clinician } from "@/clinicians/model";
+import { ROLE_EXPLAINER, roleLabel, sampleCredentials } from "@/clinicians/roles";
+import { openSlots, type Slot } from "@/clinicians/schedule";
+import { concernPhrase, languagePhrase } from "@/data/phrases";
+import { samplePayers } from "@/facts";
+import { centralDay, centralTime } from "@/time";
+import { facts as reasonFacts } from "@/clinicians/match";
+import { Portrait } from "./Portrait";
+
+const payerLabel = (id: string) => samplePayers.value.find((p) => p.id === id)?.label ?? id;
+
+/**
+ * The clinician profile: a full-screen sheet on mobile, a side drawer on
+ * desktop. Esc and the browser Back button close it (the URL carries
+ * ?clinician=id, so it is shareable and restorable). Picking a time here
+ * behaves exactly like picking one on the card.
+ */
+export function ClinicianProfile({
+  clinician,
+  input,
+  now,
+  onClose,
+  onPick,
+}: {
+  clinician: Clinician;
+  input: MatchInput;
+  now: Date;
+  onClose: () => void;
+  onPick: (slot: Slot) => void;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [showRole, setShowRole] = useState(false);
+  const facts = useMemo(() => reasonFacts(clinician, input), [clinician, input]);
+  const reasons = profileReasons(facts);
+  const evidence = evidenceTier(clinician);
+  const outcomeLine = profileOutcomeLine(evidence);
+  const experienceLine = profileExperienceLine(clinician);
+
+  // Availability grouped by Central-Time day, chosen windows first within a day.
+  const days = useMemo(() => groupByDay(openSlots(clinician, now), input.windows), [clinician, now, input.windows]);
+
+  // Focus trap + Escape.
+  useEffect(() => {
+    const panel = panelRef.current;
+    panel?.focus();
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !panel) return;
+      const focusable = panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const plans = clinician.acceptedPayers.map(payerLabel);
+  const languages = clinician.languages.map((l) => languagePhrase[l]);
+  const focusAreas = clinician.specialties.map((id) => concernPhrase[id]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex bg-ink/40 sm:justify-end" role="presentation" onClick={onClose}>
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${clinician.name}, profile`}
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+        className="flex h-full w-full flex-col overflow-y-auto bg-canvas outline-none sm:max-w-md sm:border-l sm:border-line"
+      >
+        <div className="sticky top-0 flex items-center justify-between border-b border-line bg-canvas px-4 py-3">
+          <p className="text-sm font-medium text-ink-muted">Clinician profile</p>
+          <button type="button" onClick={onClose} className="min-h-11 px-2 text-accent underline underline-offset-2">
+            Close
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-6 px-4 py-6">
+          {/* 1. Identity */}
+          <section className="flex items-start gap-4">
+            <Portrait id={clinician.id} name={clinician.name} size={72} />
+            <div className="flex flex-col gap-0.5">
+              <h2 className="text-xl font-semibold">{clinician.name}</h2>
+              {clinician.pronouns && <p className="text-sm text-ink-muted">{clinician.pronouns}</p>}
+              <p className="flex flex-wrap items-center gap-2 text-sm">
+                {roleLabel[clinician.role]}
+                <button
+                  type="button"
+                  onClick={() => setShowRole((v) => !v)}
+                  className="text-accent underline underline-offset-2"
+                  aria-expanded={showRole}
+                >
+                  What&apos;s the difference?
+                </button>
+              </p>
+              <p className="text-sm text-ink-muted">Video visits in Texas</p>
+            </div>
+          </section>
+
+          {showRole && (
+            <p className="rounded-md bg-accent-soft px-4 py-3 text-sm">{ROLE_EXPLAINER}</p>
+          )}
+
+          {/* 2. Why we matched you */}
+          {reasons.length > 0 && (
+            <section className="flex flex-col gap-2">
+              <h3 className="text-lg font-semibold">Why we matched you</h3>
+              <ul className="flex flex-col gap-2">
+                {reasons.map((r) => (
+                  <li key={r} className="flex gap-2">
+                    <span aria-hidden className="text-accent">
+                      ·
+                    </span>
+                    <span>{r}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* 3. About */}
+          <section className="flex flex-col gap-2">
+            <h3 className="text-lg font-semibold">About {clinician.name.split(" ")[0]}</h3>
+            <p>{clinician.bio}</p>
+          </section>
+
+          {/* 4. Focus areas */}
+          <section className="flex flex-col gap-2">
+            <h3 className="text-lg font-semibold">Focus areas</h3>
+            <div className="flex flex-wrap gap-2">
+              {focusAreas.map((area) => (
+                <span key={area} className="rounded-full bg-surface px-3 py-1 text-sm">
+                  {area}
+                </span>
+              ))}
+            </div>
+          </section>
+
+          {/* 5. Languages and plans */}
+          <section className="flex flex-col gap-2">
+            <h3 className="text-lg font-semibold">Languages and plans</h3>
+            <p className="text-sm">
+              <span className="text-ink-muted">Languages: </span>
+              {languages.join(", ")}
+            </p>
+            <p className="text-sm">
+              <span className="text-ink-muted">Plans accepted: </span>
+              {plans.join(", ")}, and self pay
+            </p>
+          </section>
+
+          {/* 6. Training and licensing */}
+          <section className="flex flex-col gap-2">
+            <h3 className="text-lg font-semibold">Training and licensing</h3>
+            <ul className="flex flex-col gap-1 text-sm">
+              {sampleCredentials(clinician.role).map((line) => (
+                <li key={line} className="flex gap-2">
+                  <span aria-hidden className="text-accent">
+                    ·
+                  </span>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-ink-muted">Sample details for this prototype.</p>
+          </section>
+
+          {/* 7. Evidence */}
+          {(outcomeLine || experienceLine) && (
+            <section className="flex flex-col gap-2">
+              <h3 className="text-lg font-semibold">Experience</h3>
+              {experienceLine && <p className="text-sm text-ink-muted">{experienceLine}</p>}
+              {outcomeLine && <p className="text-sm text-ink-muted">{outcomeLine}</p>}
+            </section>
+          )}
+
+          {/* 8. Full availability */}
+          <section id="profile-availability" className="flex flex-col gap-3">
+            <h3 className="text-lg font-semibold">Availability (next 2 weeks)</h3>
+            {days.length === 0 ? (
+              <p className="text-ink-muted">No openings in the next two weeks.</p>
+            ) : (
+              days.map((day) => (
+                <div key={day.label} className="flex flex-col gap-2">
+                  <p className="text-sm font-medium">{day.label}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {day.slots.map((slot) => (
+                      <button
+                        key={slot.iso}
+                        type="button"
+                        onClick={() => onPick(slot)}
+                        className="min-h-11 rounded-md border border-accent bg-accent-soft px-4 py-2 text-base font-medium"
+                      >
+                        {centralTime(slot.iso)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface DayGroup {
+  label: string;
+  slots: Slot[];
+}
+
+/** Groups slots by Central day in chronological order; chosen windows first within a day. */
+function groupByDay(slots: Slot[], windows: MatchInput["windows"]): DayGroup[] {
+  const chosen = new Set(windows);
+  const rank = (w: Slot["window"]) => (chosen.size && chosen.has(w) ? 0 : 1);
+  const byDay = new Map<string, Slot[]>();
+  for (const slot of slots) {
+    const key = centralDay(slot.iso);
+    const list = byDay.get(key) ?? [];
+    list.push(slot);
+    byDay.set(key, list);
+  }
+  return [...byDay.entries()].map(([label, list]) => ({
+    label,
+    slots: list.sort((a, b) => rank(a.window) - rank(b.window) || a.iso.localeCompare(b.iso)),
+  }));
+}

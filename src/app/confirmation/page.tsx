@@ -2,6 +2,7 @@
 
 import { useTrackOnce } from "@/analytics/hooks";
 import { AfterVisitScreen } from "@/components/aftervisit";
+import { Portrait } from "@/components/Portrait";
 import { LoadingScreen, TextLink } from "@/components/ui";
 import { buildIcs } from "@/aftervisit/content";
 import { useAnswers } from "@/session/store";
@@ -21,12 +22,27 @@ export default function ConfirmationPage() {
   const slot = answers.selectedSlot;
   return (
     <AfterVisitScreen stepId="confirmation">
-      <Confirmed clinicianName={clinician?.name} slotIso={slot?.iso} returning={answers.returningPatient} />
+      <Confirmed
+        clinicianId={clinician?.id}
+        clinicianName={clinician?.name}
+        slotIso={slot?.iso}
+        returning={answers.returningPatient}
+      />
     </AfterVisitScreen>
   );
 }
 
-function Confirmed({ clinicianName, slotIso, returning }: { clinicianName?: string; slotIso?: string; returning?: boolean }) {
+function Confirmed({
+  clinicianId,
+  clinicianName,
+  slotIso,
+  returning,
+}: {
+  clinicianId?: string;
+  clinicianName?: string;
+  slotIso?: string;
+  returning?: boolean;
+}) {
   useTrackOnce("confirmation.viewed", "confirmation.viewed");
 
   function addToCalendar() {
@@ -47,7 +63,9 @@ function Confirmed({ clinicianName, slotIso, returning }: { clinicianName?: stri
         <p className="text-ink-muted">Your first visit is set. Here&apos;s everything you need.</p>
       </div>
 
-      <section aria-label="Your visit" className="flex flex-col gap-1 rounded-lg bg-accent-soft p-4">
+      <section aria-label="Your visit" className="flex items-start gap-3 rounded-lg bg-accent-soft p-4">
+        {clinicianId && <Portrait id={clinicianId} name={clinicianName ?? "your clinician"} size={48} />}
+        <div className="flex flex-col gap-1">
         <p className="text-sm text-ink-muted">Video visit</p>
         <p className="text-lg font-semibold">{clinicianName ?? "Your clinician"}</p>
         <p data-testid="confirmation-when" className="text-base">
@@ -60,6 +78,7 @@ function Confirmed({ clinicianName, slotIso, returning }: { clinicianName?: stri
         >
           Add to calendar
         </button>
+        </div>
       </section>
 
       <section aria-label="What happens next" className="flex flex-col gap-3 rounded-lg bg-surface p-4">

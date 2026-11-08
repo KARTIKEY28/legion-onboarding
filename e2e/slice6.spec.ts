@@ -14,7 +14,7 @@ const PICKED = {
   needs: { availability: ["weekday_afternoons"] },
   insurance: { path: "self_pay" },
   selectedClinician: { id: "c1", name: "Dr. Dana Whitfield" },
-  selectedSlot: { iso: "2026-11-10T14:00:00.000Z", label: "Tue, Nov 10 · 2:00 PM" },
+  selectedSlot: { iso: "2026-11-10T20:00:00.000Z", label: "Tue, Nov 10 · 2:00 PM" },
   notifyEmail: "patient@example.com",
 };
 
@@ -26,7 +26,7 @@ test("cost: the chosen clinician and time lead, Change links back to Match, Cont
   await expect(page.getByText("Step 8 of 10 · Cost and terms")).toBeVisible();
   const visit = page.getByRole("region", { name: "Your chosen visit" });
   await expect(visit).toContainText("Dr. Dana Whitfield");
-  await expect(visit).toContainText("Tue, Nov 10 · 2:00 PM");
+  await expect(visit).toContainText("2:00 PM CT");
   await visit.getByRole("link", { name: "Change" }).click();
   await expect(page).toHaveURL(/\/match$/);
 

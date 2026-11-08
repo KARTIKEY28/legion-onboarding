@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getTracker } from "@/analytics/client";
 import { trackOnce } from "@/analytics/hooks";
+import { ClinicianProfile } from "@/components/ClinicianProfile";
+import { Portrait } from "@/components/Portrait";
+import { roleLabel } from "@/clinicians/roles";
 import { cardEvidenceLine, reasonsTemplate } from "@/ai/matchReasons";
 import { templateReflection, type ReflectInput, type Reflection } from "@/ai/reflect";
 import {
@@ -52,6 +55,14 @@ async function fetchHeadline(input: ReflectInput): Promise<Reflection> {
 }
 
 export default function MatchPage() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <MatchGate />
+    </Suspense>
+  );
+}
+
+function MatchGate() {
   const answers = useAnswers();
   if (!answers) return <LoadingScreen />;
   return <MatchView answers={answers} />;
@@ -59,6 +70,7 @@ export default function MatchPage() {
 
 function MatchView({ answers }: { answers: SessionAnswers }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const now = useRef(new Date()).current;
   const baseInput = useMemo(() => matchInputFromAnswers(answers), [answers]);
 
@@ -103,7 +115,13 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function choose(match: RankedMatch, slot: Slot, from: "top_match" | "full_list", rank: number) {
+  function choose(
+    match: RankedMatch,
+    slot: Slot,
+    from: "top_match" | "full_list",
+    rank: number,
+    source: "card" | "profile",
+  ) {
     if (slotTakenArmed() && !consumed.current) {
       consumed.current = true;
       setTakenFor(match.clinician.id);
@@ -114,9 +132,34 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
       selectedClinician: { id: match.clinician.id, name: match.clinician.name },
       selectedSlot: { iso: slot.iso, label: slot.label },
     });
-    getTracker()("provider.selected", { from, rank, evidence_tier: tierKey(match.evidence) });
+    getTracker()("provider.selected", { from, source, rank, evidence_tier: tierKey(match.evidence) });
     router.push("/cost");
   }
+
+  // Profile sheet, driven by the URL (?clinician=id) so Back and sharing work.
+  const openId = searchParams.get("clinician");
+  const openMeta = useRef<{ from: "card" | "full_list"; rank: number }>({ from: "card", rank: 0 });
+  const firedProfile = useRef<string | null>(null);
+  const openMatch = useMemo(
+    () => (openId ? allRanked(input, now).find((m) => m.clinician.id === openId) ?? null : null),
+    [openId, input, now],
+  );
+
+  function openProfile(id: string, from: "card" | "full_list", rank: number) {
+    openMeta.current = { from, rank };
+    router.push(`/match?clinician=${id}`, { scroll: false });
+  }
+  function closeProfile() {
+    router.back();
+  }
+
+  useEffect(() => {
+    if (openId && firedProfile.current !== openId) {
+      firedProfile.current = openId;
+      getTracker()("profile.opened", { from: openMeta.current.from, rank: openMeta.current.rank });
+    }
+    if (!openId) firedProfile.current = null;
+  }, [openId]);
 
   function openFullList() {
     trackOnce("match.full_list_opened", "match.full_list_opened");
@@ -165,7 +208,8 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
                     match={match}
                     filler
                     taken={takenFor === match.clinician.id}
-                    onPick={(slot) => choose(match, slot, "top_match", i + 1)}
+                    onPick={(slot) => choose(match, slot, "top_match", i + 1, "card")}
+                    onOpenProfile={() => openProfile(match.clinician.id, "card", i + 1)}
                     onChooseAnother={() => setTakenFor(null)}
                   />
                 </li>
@@ -180,7 +224,8 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
                       match={match}
                       filler={false}
                       taken={takenFor === match.clinician.id}
-                      onPick={(slot) => choose(match, slot, "top_match", i + 1)}
+                      onPick={(slot) => choose(match, slot, "top_match", i + 1, "card")}
+                      onOpenProfile={() => openProfile(match.clinician.id, "card", i + 1)}
                       onChooseAnother={() => setTakenFor(null)}
                     />
                   </li>
@@ -198,7 +243,8 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
                           match={match}
                           filler
                           taken={takenFor === match.clinician.id}
-                          onPick={(slot) => choose(match, slot, "top_match", strong.length + i + 1)}
+                          onPick={(slot) => choose(match, slot, "top_match", strong.length + i + 1, "card")}
+                          onOpenProfile={() => openProfile(match.clinician.id, "card", strong.length + i + 1)}
                           onChooseAnother={() => setTakenFor(null)}
                         />
                       </li>
@@ -221,7 +267,8 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
                   match={match}
                   filler={!match.strong}
                   taken={takenFor === match.clinician.id}
-                  onPick={(slot) => choose(match, slot, "full_list", i + 1)}
+                  onPick={(slot) => choose(match, slot, "full_list", i + 1, "card")}
+                  onOpenProfile={() => openProfile(match.clinician.id, "full_list", i + 1)}
                   onChooseAnother={() => setTakenFor(null)}
                 />
               </li>
@@ -255,6 +302,24 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
       )}
 
       <TextLink href="/needs">Back</TextLink>
+
+      {openMatch && (
+        <ClinicianProfile
+          clinician={openMatch.clinician}
+          input={input}
+          now={now}
+          onClose={closeProfile}
+          onPick={(slot) =>
+            choose(
+              openMatch,
+              slot,
+              openMeta.current.from === "full_list" ? "full_list" : "top_match",
+              openMeta.current.rank || 1,
+              "profile",
+            )
+          }
+        />
+      )}
     </Screen>
   );
 }
@@ -264,12 +329,14 @@ function ClinicianCard({
   filler,
   taken,
   onPick,
+  onOpenProfile,
   onChooseAnother,
 }: {
   match: RankedMatch;
   filler: boolean;
   taken: boolean;
   onPick: (slot: Slot) => void;
+  onOpenProfile: () => void;
   onChooseAnother: () => void;
 }) {
   const { clinician, facts, slots } = match;
@@ -279,12 +346,20 @@ function ClinicianCard({
 
   return (
     <article className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
-      <div className="flex flex-col gap-0.5">
-        <h2 className="text-lg font-semibold">
-          {clinician.name} {clinician.pronouns && <span className="font-normal text-ink-muted">({clinician.pronouns})</span>}
-        </h2>
-        <p className="text-sm text-ink-muted">{clinician.credential}</p>
-        {filler && <p className="text-sm text-ink-muted">Also available</p>}
+      <div className="flex items-start gap-3">
+        <button type="button" onClick={onOpenProfile} aria-label={`Open ${clinician.name}'s profile`}>
+          <Portrait id={clinician.id} name={clinician.name} size={56} />
+        </button>
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-lg font-semibold">
+            <button type="button" onClick={onOpenProfile} className="text-left underline-offset-2 hover:underline">
+              {clinician.name}
+            </button>{" "}
+            {clinician.pronouns && <span className="font-normal text-ink-muted">({clinician.pronouns})</span>}
+          </h2>
+          <p className="text-sm text-ink-muted">{roleLabel[clinician.role]}</p>
+          {filler && <p className="text-sm text-ink-muted">Also available</p>}
+        </div>
       </div>
 
       {reasons.length > 0 && (
@@ -326,6 +401,11 @@ function ClinicianCard({
           </div>
         ) : (
           <p className="text-ink-muted">No more openings in the next two weeks.</p>
+        )}
+        {!taken && (
+          <button type="button" onClick={onOpenProfile} className="self-start text-sm text-accent underline underline-offset-2">
+            More times
+          </button>
         )}
         {taken && (
           <button type="button" onClick={onChooseAnother} className="self-start text-accent underline underline-offset-2">

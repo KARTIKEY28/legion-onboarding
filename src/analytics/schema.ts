@@ -105,9 +105,15 @@ export const EVENTS = {
   }),
   "match.full_list_opened": event("match"),
   "match.none_selected": event("match"),
-  // The clinician's name is never sent; rank and tier only, so it can't be joined to patient data
+  // Opening a clinician profile; rank and where it was opened from, never the name
+  "profile.opened": event("match", {
+    from: z.enum(["card", "full_list"]),
+    rank: count,
+  }),
+  // The clinician's name is never sent; rank, tier and source only, so it can't be joined to patient data
   "provider.selected": event("match", {
     from: z.enum(["top_match", "full_list"]),
+    source: z.enum(["card", "profile"]),
     rank: count,
     evidence_tier: z.enum(["declared_fit", "experience", "outcomes"]),
   }),

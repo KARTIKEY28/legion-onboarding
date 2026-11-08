@@ -96,7 +96,7 @@ export function cardEvidence(c: Clinician): EvidenceTier {
   return { tier: 1 };
 }
 
-function facts(c: Clinician, input: MatchInput): MatchReasonFacts {
+export function facts(c: Clinician, input: MatchInput): MatchReasonFacts {
   const matched = input.topics.filter((t) => c.specialties.includes(t));
   // For a patient who named no topics, surface the clinician's own focus areas.
   const topicIds = matched.length ? matched : input.topics.length ? [] : c.specialties.slice(0, 2);

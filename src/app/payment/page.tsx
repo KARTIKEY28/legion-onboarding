@@ -6,6 +6,7 @@ import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { getTracker } from "@/analytics/client";
 import { CLINICIANS } from "@/clinicians/data";
 import { nextSlots, type Slot } from "@/clinicians/schedule";
+import { Portrait } from "@/components/Portrait";
 import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, TextLink, barPrimary } from "@/components/ui";
 import { scenarioForCard, TEST_CARDS, maskCard } from "@/payment/cards";
 import type { BookingResult, PaymentScenario } from "@/payment/booking";
@@ -137,7 +138,9 @@ function PaymentScreen({ path }: { path: PaymentPath }) {
       </div>
 
       {/* Booking summary */}
-      <section aria-label="Booking summary" className="flex flex-col gap-1 rounded-lg bg-accent-soft p-4">
+      <section aria-label="Booking summary" className="flex items-start gap-3 rounded-lg bg-accent-soft p-4">
+        <Portrait id={clinician.id} name={clinician.name} size={48} />
+        <div className="flex flex-col gap-1">
         <p className="text-sm text-ink-muted">Your first visit</p>
         <p className="text-lg font-semibold">{clinician.name}</p>
         <p data-testid="booking-when" className="text-base">
@@ -152,6 +155,7 @@ function PaymentScreen({ path }: { path: PaymentPath }) {
           <TextLink href="/cost" className="text-sm">
             Change cost details
           </TextLink>
+        </div>
         </div>
       </section>
 
