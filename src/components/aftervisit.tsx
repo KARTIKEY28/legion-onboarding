@@ -94,7 +94,7 @@ export function DevPanel() {
   if (process.env.NEXT_PUBLIC_SHOW_DEV_LABEL !== "1") return null;
   return (
     <section aria-label="Demo controls (dev only)" className="flex flex-col gap-3 rounded-md border border-dashed border-line p-3 text-sm">
-      <p className="font-medium text-ink-muted">Demo controls — dev only, never shown to patients</p>
+      <p className="font-medium text-ink-muted">Demo controls. Dev only, never shown to patients</p>
       <DevRow label="Time">
         {CLOCKS.map((c) => (
           <DevChip key={c.id} active={demo.clock === c.id} onClick={() => setDemo({ clock: c.id })}>

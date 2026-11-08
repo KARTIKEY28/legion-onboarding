@@ -56,7 +56,7 @@ function IntakeForms({ answers }: { answers: SessionAnswers }) {
 
   return (
     <Card title="Intake forms" tag="Recommended, not required">
-      <p className="text-ink-muted">We&apos;ve filled these in from what you told us. Check them over — no retyping.</p>
+      <p className="text-ink-muted">We&apos;ve filled these in from what you told us. Check them over. No retyping.</p>
       <dl className="flex flex-col gap-2">
         <Prefill label="What brings you in" value={topics.length ? topics.join(", ") : "You'll tell your clinician"} />
         <Prefill label="Times that suit you" value={times.length ? times.join(", ") : "Flexible"} />
@@ -64,7 +64,7 @@ function IntakeForms({ answers }: { answers: SessionAnswers }) {
         <Prefill label="Safety questions" value={safetyAnswered ? "Answered" : "Not answered"} />
       </dl>
       {done ? (
-        <p role="status" className="rounded-md bg-accent-soft px-4 py-2">Thanks — your details are confirmed.</p>
+        <p role="status" className="rounded-md bg-accent-soft px-4 py-2">Thanks. Your details are confirmed.</p>
       ) : (
         <button type="button" onClick={confirm} className="self-start rounded-md border border-accent px-4 py-2 text-base font-medium text-accent">
           Confirm my details
@@ -159,14 +159,14 @@ function PhotoId() {
     <Card title="Photo ID" tag="Optional">
       <p className="text-ink-muted">A photo ID helps us confirm who you are. You can do this later.</p>
       <p className="rounded-md bg-danger-soft px-4 py-2 text-sm">
-        Demo only — don&apos;t upload a real ID. Here&apos;s a synthetic sample. Nothing you add is stored after this preview.
+        Demo only. Don&apos;t upload a real ID. Here&apos;s a synthetic sample. Nothing you add is stored after this preview.
       </p>
       {/* eslint-disable-next-line @next/next/no-img-element -- a static synthetic SVG, no optimization needed */}
       <img src="/sample-id.svg" alt="Synthetic sample ID, not a real document" width={240} height={150} className="rounded-md border border-line" />
       {state === "uploaded" ? (
-        <p role="status" className="rounded-md bg-accent-soft px-4 py-2">Sample received — not stored.</p>
+        <p role="status" className="rounded-md bg-accent-soft px-4 py-2">Sample received. Not stored.</p>
       ) : state === "skipped" ? (
-        <p role="status" className="rounded-md bg-surface px-4 py-2 text-ink-muted">No problem — you can add it later.</p>
+        <p role="status" className="rounded-md bg-surface px-4 py-2 text-ink-muted">No problem. You can add it later.</p>
       ) : (
         <div className="flex flex-wrap gap-3">
           <button type="button" onClick={upload} className="rounded-md border border-accent px-4 py-2 text-base font-medium text-accent">
@@ -223,7 +223,7 @@ function OutsideRecords() {
       </p>
       {choice ? (
         <p role="status" className="rounded-md bg-accent-soft px-4 py-2">
-          {choice === "granted" ? "Thanks — we'll request your records." : "Okay — we won't request any records."}
+          {choice === "granted" ? "Thanks. We'll request your records." : "Okay. We won't request any records."}
         </p>
       ) : (
         <div className="flex flex-wrap gap-3">

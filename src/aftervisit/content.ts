@@ -51,7 +51,7 @@ export interface ReminderCard {
 
 function formsLine(formsComplete: boolean): string {
   return formsComplete
-    ? "Your intake forms are done — thank you."
+    ? "Your intake forms are done. Thank you."
     : "You haven't filled your intake forms yet. They're optional and your visit happens either way.";
 }
 
@@ -61,7 +61,7 @@ function insuranceLine(ctx: VisitContext): string {
     case "confirmed":
       return "Your insurance is confirmed.";
     case "more_info":
-      return "We need a little more insurance information — our team will follow up.";
+      return "We need a little more insurance information. Our team will follow up.";
     default:
       return "We're still checking your insurance.";
   }
@@ -110,7 +110,7 @@ export function previsitEmails(ctx: VisitContext, conditionLabel?: string): Emai
       subject: `A little prep for ${conditionLabel.toLowerCase()}`,
       body: [
         `Since you mentioned ${conditionLabel.toLowerCase()}, it can help to think of a couple of recent moments you'd like to talk through.`,
-        "There's nothing to prepare or get right — your clinician will guide the conversation.",
+        "There's nothing to prepare or get right. Your clinician will guide the conversation.",
         "This note is about logistics and what to expect, not medical advice.",
       ],
     });

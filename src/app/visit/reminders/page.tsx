@@ -16,7 +16,7 @@ export default function RemindersPage() {
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">Your reminders</h1>
         <p className="text-ink-muted">
-          How your reminders look, as email and text. They change with whether your forms and insurance are done — flip the demo
+          How your reminders look, as email and text. They change with whether your forms and insurance are done. Flip the demo
           controls to see.
         </p>
       </div>

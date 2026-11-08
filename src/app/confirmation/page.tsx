@@ -10,7 +10,7 @@ import { formatCentral } from "@/time";
 
 const NEXT_STEPS = [
   "Intake forms, so your clinician knows you before you meet (optional).",
-  "An insurance check — we'll let you know if we need anything.",
+  "An insurance check. We'll let you know if we need anything.",
   "Reminders 48 hours, 24 hours and 1 hour before your visit.",
   "Your video visit, from the link we'll show you here.",
 ];
