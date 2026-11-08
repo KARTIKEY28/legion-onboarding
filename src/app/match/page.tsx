@@ -20,7 +20,13 @@ import {
   type RankedMatch,
 } from "@/clinicians/match";
 import type { EvidenceTier } from "@/clinicians/match";
-import type { Slot } from "@/clinicians/schedule";
+import { openSlots, type Slot } from "@/clinicians/schedule";
+import {
+  AVAILABILITY_WINDOWS,
+  CLINICIAN_GENDERS,
+  type AvailabilityWindow,
+  type ClinicianGender,
+} from "@/clinicians/model";
 import { concernPhrase, languagePhrase, windowWord } from "@/data/phrases";
 import { LoadingScreen, Progress, Screen, TextLink } from "@/components/ui";
 import { formatCentral } from "@/time";
@@ -84,6 +90,8 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
   const cards = noneSelected ? allRanked(input, now).slice(0, 3) : displayMatches(result);
 
   const [showAll, setShowAll] = useState(false);
+  const [listWindow, setListWindow] = useState<AvailabilityWindow | "any">("any");
+  const [listGender, setListGender] = useState<ClinicianGender | "any">("any");
   const [takenFor, setTakenFor] = useState<string | null>(null);
   const consumed = useRef(false);
   const [headline, setHeadline] = useState<Reflection | null>(null);
@@ -174,7 +182,13 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
 
   const strong = noneSelected ? [] : result.strongMatches.slice(0, 3);
   const also = noneSelected ? [] : result.alsoAvailable;
-  const fullList = showAll ? allRanked(input, now) : [];
+  const fullList = showAll
+    ? allRanked(input, now).filter((m) => {
+        if (listGender !== "any" && m.clinician.gender !== listGender) return false;
+        if (listWindow !== "any" && !openSlots(m.clinician, now, [listWindow]).length) return false;
+        return true;
+      })
+    : [];
 
   return (
     <Screen>
@@ -260,6 +274,43 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
       {showAll && (
         <section aria-label="All clinicians" className="flex flex-col gap-4">
           <p className="text-ink-muted">All clinicians with openings, most relevant first.</p>
+          <div className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium">Time of day</span>
+              <select
+                value={listWindow}
+                onChange={(e) => setListWindow(e.target.value as AvailabilityWindow | "any")}
+                className="min-h-11 rounded-md border border-line bg-surface px-3 text-base"
+              >
+                <option value="any">Any time</option>
+                {AVAILABILITY_WINDOWS.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium">Clinician gender</span>
+              <select
+                value={listGender}
+                onChange={(e) => setListGender(e.target.value as ClinicianGender | "any")}
+                className="min-h-11 rounded-md border border-line bg-surface px-3 text-base"
+              >
+                <option value="any">Any gender</option>
+                {CLINICIAN_GENDERS.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {fullList.length === 0 ? (
+            <p className="rounded-md bg-accent-soft px-4 py-3 text-sm">
+              No clinicians match those filters. Try widening them.
+            </p>
+          ) : (
           <ul className="flex flex-col gap-4">
             {fullList.map((match, i) => (
               <li key={match.clinician.id}>
@@ -274,6 +325,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
               </li>
             ))}
           </ul>
+          )}
         </section>
       )}
 
@@ -345,25 +397,28 @@ function ClinicianCard({
   const remaining = taken ? slots.slice(1) : slots.slice(0, 2);
 
   return (
-    <article className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
-      <div className="flex items-start gap-3">
+    <article className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3">
+      {/* Compact header row: portrait, name, pronouns, role */}
+      <div className="flex items-center gap-3">
         <button type="button" onClick={onOpenProfile} aria-label={`Open ${clinician.name}'s profile`}>
-          <Portrait id={clinician.id} name={clinician.name} size={56} />
+          <Portrait id={clinician.id} name={clinician.name} size={44} />
         </button>
-        <div className="flex flex-col gap-0.5">
-          <h2 className="text-lg font-semibold">
+        <div className="flex flex-col">
+          <p className="text-base font-semibold leading-tight">
             <button type="button" onClick={onOpenProfile} className="text-left underline-offset-2 hover:underline">
               {clinician.name}
             </button>{" "}
-            {clinician.pronouns && <span className="font-normal text-ink-muted">({clinician.pronouns})</span>}
-          </h2>
-          <p className="text-sm text-ink-muted">{roleLabel[clinician.role]}</p>
-          {filler && <p className="text-sm text-ink-muted">Also available</p>}
+            {clinician.pronouns && <span className="text-sm font-normal text-ink-muted">({clinician.pronouns})</span>}
+          </p>
+          <p className="text-sm text-ink-muted">
+            {roleLabel[clinician.role]}
+            {filler && <span> · Also available</span>}
+          </p>
         </div>
       </div>
 
       {reasons.length > 0 && (
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col gap-0.5 text-sm">
           {reasons.map((reason) => (
             <li key={reason} className="flex gap-2">
               <span aria-hidden className="text-accent">
@@ -375,7 +430,7 @@ function ClinicianCard({
         </ul>
       )}
 
-      {evLine && <p className="text-sm text-ink-muted">{evLine}</p>}
+      {evLine && <p className="text-xs text-ink-muted">{evLine}</p>}
 
       {taken && (
         <p role="status" className="rounded-md bg-accent-soft px-3 py-2 text-sm">
@@ -384,35 +439,33 @@ function ClinicianCard({
         </p>
       )}
 
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium">Next openings</p>
-        {remaining.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {remaining.map((slot) => (
-              <button
-                key={slot.iso}
-                type="button"
-                onClick={() => onPick(slot)}
-                className="min-h-11 rounded-md border border-accent bg-accent-soft px-4 py-2 text-base font-medium"
-              >
-                {formatCentral(slot.iso)}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="text-ink-muted">No more openings in the next two weeks.</p>
-        )}
-        {!taken && (
-          <button type="button" onClick={onOpenProfile} className="self-start text-sm text-accent underline underline-offset-2">
-            More times
-          </button>
-        )}
-        {taken && (
-          <button type="button" onClick={onChooseAnother} className="self-start text-accent underline underline-offset-2">
-            Choose another clinician
-          </button>
-        )}
-      </div>
+      {remaining.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {remaining.map((slot) => (
+            <button
+              key={slot.iso}
+              type="button"
+              onClick={() => onPick(slot)}
+              className="min-h-11 rounded-md border border-accent bg-accent-soft px-3 py-2 text-sm font-medium"
+            >
+              {formatCentral(slot.iso)}
+            </button>
+          ))}
+          {!taken && (
+            <button type="button" onClick={onOpenProfile} className="text-sm text-accent underline underline-offset-2">
+              More times
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-ink-muted">No more openings in the next two weeks.</p>
+      )}
+
+      {taken && (
+        <button type="button" onClick={onChooseAnother} className="self-start text-sm text-accent underline underline-offset-2">
+          Choose another clinician
+        </button>
+      )}
     </article>
   );
 }

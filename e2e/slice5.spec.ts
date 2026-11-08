@@ -67,6 +67,18 @@ test("'See all clinicians' opens the full list and selecting fires from full_lis
   expect(selected[0].properties.from).toBe("full_list");
 });
 
+test("See all clinicians: the gender filter narrows the compact list", async ({ page }) => {
+  await setModel(page, "fail");
+  await seedAndOpenMatch(page, STRONG);
+  await page.getByRole("button", { name: "See all clinicians" }).click();
+  const before = await page.getByRole("article").count();
+  expect(before).toBeGreaterThan(3);
+  await page.getByLabel("Clinician gender").selectOption("man");
+  const after = await page.getByRole("article").count();
+  expect(after).toBeGreaterThan(0);
+  expect(after).toBeLessThan(before);
+});
+
 test("no strong match: closest options shown, widening the time flips to strong matches", async ({ page }) => {
   await setModel(page, "fail");
   // low_mood but weekends-only: no low_mood clinician works weekends, so no strong match.
