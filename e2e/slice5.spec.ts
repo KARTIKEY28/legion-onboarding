@@ -24,8 +24,8 @@ test("strong matches: three cards, picking a time goes to Cost, clean events", a
   const cards = page.getByRole("article");
   await expect(cards).toHaveCount(3);
   // Top card shows reasons and the illustrative evidence line.
-  await expect(cards.first()).toContainText("Works with");
-  await expect(cards.first()).toContainText("illustrative");
+  await expect(cards.first()).toContainText("Focuses on");
+  await expect(cards.first()).toContainText("Illustrative");
 
   // Pick the first open time on the top card.
   await cards.first().getByRole("button").first().click();
@@ -48,7 +48,7 @@ test("'None of these feel right' shows the no-strong-match state and fires the e
   await setModel(page, "fail");
   await seedAndOpenMatch(page, STRONG);
   await page.getByRole("button", { name: "None of these feel right" }).click();
-  await expect(page.getByText(/couldn't find a strong match/)).toBeVisible();
+  await expect(page.getByText(/couldn't find a clinician who fits everything/)).toBeVisible();
   expect((await events(page)).filter((e) => e.event === "match.none_selected")).toHaveLength(1);
 });
 
@@ -75,13 +75,13 @@ test("no strong match: closest options shown, widening the time flips to strong 
     insurance: { path: "self_pay" },
   });
 
-  await expect(page.getByText(/couldn't find a strong match/)).toBeVisible();
+  await expect(page.getByText(/couldn't find a clinician who fits everything/)).toBeVisible();
   expect((await events(page)).filter((e) => e.event === "match.viewed")[0].properties.no_strong_match).toBe(true);
-  await expect(page.getByLabel(/Tell me when more openings/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Tell me when more openings/ })).toBeVisible();
 
   // Widen to any time of day -> strong matches appear and the banner goes away.
   await page.getByRole("button", { name: "Any time of day" }).click();
-  await expect(page.getByText(/couldn't find a strong match/)).toHaveCount(0);
+  await expect(page.getByText(/couldn't find a clinician who fits everything/)).toHaveCount(0);
   await expect(page.getByRole("article")).toHaveCount(3);
 });
 
