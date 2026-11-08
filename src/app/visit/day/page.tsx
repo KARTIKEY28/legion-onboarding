@@ -55,7 +55,7 @@ function DeviceCheck() {
       </div>
       {ran && failed && (
         <p role="status" className="rounded-md bg-danger-soft px-4 py-2 text-sm">
-          Something isn&apos;t working? You can still join — our team can help, or you can switch to a phone call. We won&apos;t let a
+          Something isn&apos;t working? You can still join. Our team can help, or you can switch to a phone call. We won&apos;t let a
           device problem stop your visit.
         </p>
       )}

@@ -233,7 +233,7 @@ function SlotTaken({ slots, onPick, clinicianName }: { slots: Slot[]; onPick: (s
     <section aria-label="That time was just taken" className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
       <h2 className="text-lg font-semibold">That time was just taken</h2>
       <p className="text-ink-muted">
-        Nothing held the slot while you were deciding, so it&apos;s gone. Here are {clinicianName}&apos;s next openings — pick one to
+        Nothing held the slot while you were deciding, so it&apos;s gone. Here are {clinicianName}&apos;s next openings. Pick one to
         keep going.
       </p>
       <div className="flex flex-col gap-2">

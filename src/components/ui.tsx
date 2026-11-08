@@ -85,5 +85,5 @@ export function LoadingScreen() {
 /** Development-only label; never shown to a patient. Set NEXT_PUBLIC_SHOW_DEV_LABEL=1. */
 export function DevLabel() {
   if (process.env.NEXT_PUBLIC_SHOW_DEV_LABEL !== "1") return null;
-  return <p className="px-4 py-1 text-center text-sm text-ink-muted">Prototype — internal preview</p>;
+  return <p className="px-4 py-1 text-center text-sm text-ink-muted">Prototype. Internal preview</p>;
 }

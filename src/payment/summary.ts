@@ -10,9 +10,9 @@ export type PaymentPath = "insured" | "self_pay" | "not_sure";
 /** The patient's cost path in one line. */
 export function bookingCostLine(path: PaymentPath): string {
   if (path === "self_pay") {
-    return `Paying without insurance — $${selfPayPrices.initialVisit.value} for your first visit.`;
+    return `Paying without insurance. $${selfPayPrices.initialVisit.value} for your first visit.`;
   }
-  return "Using insurance — your cost is confirmed after we verify your coverage.";
+  return "Using insurance. Your cost is confirmed after we verify your coverage.";
 }
 
 /** The cancellation terms in one line. */

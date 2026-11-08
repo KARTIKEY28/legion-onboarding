@@ -30,7 +30,7 @@ function Completed() {
         <h2 className="text-lg font-semibold">What&apos;s next</h2>
         <ul className="flex flex-col gap-2">
           <li>Your clinician may share notes or next steps in your account.</li>
-          <li>Follow-up visits are ${selfPayPrices.followUp.value} each — book one whenever you&apos;re ready.</li>
+          <li>Follow-up visits are ${selfPayPrices.followUp.value} each. Book one whenever you&apos;re ready.</li>
           <li>You can message your care team any time between visits.</li>
         </ul>
         <TextLink href="/confirmation" className="self-start">
@@ -47,7 +47,7 @@ function Upcoming({ devLabel }: { devLabel: boolean }) {
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">After your visit</h1>
         <p className="text-ink-muted">
-          Once your visit happens, this is where you&apos;ll pick up — follow-ups, notes and booking again.
+          Once your visit happens, this is where you&apos;ll pick up. Follow-ups, notes and booking again.
         </p>
       </div>
       {devLabel && (

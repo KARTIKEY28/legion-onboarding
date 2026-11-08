@@ -17,7 +17,7 @@ export default function PrevisitEmailPage() {
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">Pre-visit email</h1>
         <p className="text-ink-muted">
-          What we&apos;d send before your visit — logistics and what to expect, not medical advice. Illustrative.
+          What we&apos;d send before your visit. Logistics and what to expect, not medical advice. Illustrative.
         </p>
       </div>
       {ctx ? (

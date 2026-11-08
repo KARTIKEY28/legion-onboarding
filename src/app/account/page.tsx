@@ -147,7 +147,7 @@ function AccountForm() {
         {existing && (
           <div role="status" className="flex flex-col gap-3 rounded-md bg-accent-soft px-4 py-3">
             {linkSent ? (
-              <p>Check your inbox — we&apos;ve sent a sign-in link so you can continue.</p>
+              <p>Check your inbox. We&apos;ve sent a sign-in link so you can continue.</p>
             ) : (
               <>
                 <p>Looks like you already have an account with that email. We can email you a link to sign in.</p>
