@@ -1,13 +1,15 @@
 import { conditionTopics } from "@/facts";
 import type { EvidenceTier, MatchReasonFacts } from "@/clinicians/match";
 import type { Clinician } from "@/clinicians/model";
+import { concernPhrase, genderPhrase, joinPhrases, languagePhrase, windowWord } from "@/data/phrases";
 
 /**
- * Reason and evidence lines for a match card. The strings are built only from
- * the clinician's record and the patient's answers (never free generation).
- * `validateReasons` is the guard for when model phrasing is enabled: every
- * number must be in the clinician's record and every condition named must be a
- * specialty of that clinician, or the line is rejected in favour of the template.
+ * Reason and evidence lines for a match card. Every string is built from the
+ * clinician's record and the patient's answers, phrased through src/data/phrases
+ * (never pasted raw option labels, never freely generated). `validateReasons`
+ * is the guard for when model phrasing is enabled: every number must be in the
+ * clinician's record and every concern named must be a specialty of that
+ * clinician, or the line is rejected in favour of the template.
  */
 
 /** The share written as "about N in 10". */
@@ -15,37 +17,67 @@ function inTen(share: number): number {
   return Math.round(share * 10);
 }
 
-/** Up to three short reason lines, most relevant first. All are record facts. */
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * Up to three reason lines, each linking the patient's answers to the
+ * clinician's facts, in order: concern, time, then plan or language.
+ */
 export function reasonsTemplate(facts: MatchReasonFacts): string[] {
   const reasons: string[] = [];
-  if (facts.matchedTopics.length) reasons.push(`Works with ${list(facts.matchedTopics)}`);
-  if (facts.windows.length) reasons.push(`Has ${list(facts.windows).toLowerCase()} openings`);
-  if (facts.language) reasons.push(`Speaks ${facts.language}`);
-  if (facts.gender) reasons.push(`Is a ${facts.gender.toLowerCase()}`);
-  if (facts.payer) reasons.push(`Takes ${facts.payer}`);
+  if (facts.matchedTopicIds.length) {
+    reasons.push(`Focuses on ${joinPhrases(facts.matchedTopicIds.map((id) => concernPhrase[id]))}`);
+  }
+  if (facts.windows.length) {
+    reasons.push(`${capitalize(joinPhrases(facts.windows.map((w) => windowWord[w])))} openings`);
+  }
+  if (facts.payer) {
+    reasons.push(`Takes ${facts.payer}`);
+  } else if (facts.language) {
+    reasons.push(`Speaks ${languagePhrase[facts.language]}`);
+  }
   return reasons.slice(0, 3);
 }
 
-/** The single evidence line for the highest tier the data supports. */
-export function evidenceLine(evidence: EvidenceTier): string | null {
-  switch (evidence.tier) {
-    case 1:
-      return "Lists this as a focus area";
-    case 2:
-      return `Has seen ${evidence.similarPatients} patients with concerns like yours (illustrative)`;
-    case 3:
-      return `About ${inTen(evidence.improvedShare)} in 10 similar patients ${evidence.measure} — illustrative, based on ${evidence.cohortSize} patients`;
-  }
+/** The primary matched concern phrase, used in the card evidence line. */
+function primaryConcern(facts: MatchReasonFacts): string {
+  const id = facts.matchedTopicIds[0];
+  return id ? concernPhrase[id] : "concerns like yours";
 }
 
-function list(items: string[]): string {
-  if (items.length <= 1) return items.join("");
-  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+/**
+ * The single evidence line for a CARD. Expects cardEvidence(), which is capped
+ * at experience (tier 2); the "illustrative" label comes first. Outcomes
+ * (tier 3) never appear on a card.
+ */
+export function cardEvidenceLine(evidence: EvidenceTier, facts: MatchReasonFacts): string | null {
+  if (evidence.tier === 2) {
+    return `Illustrative: has worked with about ${evidence.similarPatients} patients with ${primaryConcern(facts)}`;
+  }
+  return "Lists this as a focus area";
+}
+
+/**
+ * The outcomes line for the PROFILE only (tier 3). "Illustrative data" first,
+ * with the cohort size. Shown only for clinicians whose cohort is large enough,
+ * which evidenceTier already enforces.
+ */
+export function profileOutcomeLine(evidence: EvidenceTier): string | null {
+  if (evidence.tier !== 3) return null;
+  return `Illustrative data: about ${inTen(evidence.improvedShare)} in 10 of ${evidence.cohortSize} similar patients ${evidence.measure}.`;
+}
+
+/** The plain experience line for the profile (tier 2 and up). */
+export function profileExperienceLine(c: Clinician): string | null {
+  if (!c.experience) return null;
+  return `Illustrative: has worked with about ${c.experience.similarPatients} patients with concerns like these.`;
 }
 
 /**
  * True if every number in the lines is one the clinician's record supports, and
- * every condition-topic named is one of the clinician's specialties.
+ * every concern named maps to one of the clinician's specialties.
  */
 export function validateReasons(lines: string[], clinician: Clinician): boolean {
   const text = lines.join(" ");
@@ -62,7 +94,9 @@ export function validateReasons(lines: string[], clinician: Clinician): boolean 
   }
 
   for (const topic of conditionTopics.value) {
-    if (text.includes(topic.label) && !clinician.specialties.includes(topic.id)) return false;
+    if (text.includes(concernPhrase[topic.id]) && !clinician.specialties.includes(topic.id)) return false;
   }
   return true;
 }
+
+export { concernPhrase, genderPhrase, languagePhrase, windowWord };

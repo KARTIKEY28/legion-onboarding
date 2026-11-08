@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { localSafetyCheck } from "@/safety/local";
+import { buildMatchHeadline } from "@/data/phrases";
 import { removeIdentifiers } from "./redact";
 
 /**
@@ -64,12 +65,13 @@ export function templateReflection(input: ReflectInput): string {
     return shared ? "Thanks for putting it in your own words." : "You chose to skip this for now, and that's okay.";
   }
   if (input.step === "match") {
-    const bits: string[] = [];
-    if (input.topics.length) bits.push(`who work with ${list(input.topics)}`);
-    if (input.windows.length) bits.push(`with ${list(input.windows)} openings`);
-    if (input.language) bits.push(`who speak ${input.language}`);
-    if (input.payer) bits.push(`who take ${input.payer}`);
-    return bits.length ? `Clinicians ${bits.join(", ")}.` : "Clinicians who could be a good fit for you.";
+    // topics and windows arrive already phrased (concern phrases, time-of-day words).
+    return buildMatchHeadline({
+      concerns: input.topics,
+      windows: input.windows,
+      language: input.language,
+      payer: input.payer,
+    });
   }
   const parts: string[] = [];
   if (input.language) parts.push(`who speaks ${input.language}`);

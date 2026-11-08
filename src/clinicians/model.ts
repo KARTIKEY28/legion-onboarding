@@ -26,6 +26,10 @@ export const CLINICIAN_GENDERS = [
 ] as const;
 export type ClinicianGender = (typeof CLINICIAN_GENDERS)[number]["id"];
 
+/** The two clinician roles in the prototype, for the "what's the difference?" explainer. */
+export const CLINICIAN_ROLES = ["psychiatrist", "pmhnp"] as const;
+export type ClinicianRole = (typeof CLINICIAN_ROLES)[number];
+
 export interface Clinician {
   id: string;
   /** Shown on the match card. */
@@ -33,6 +37,8 @@ export interface Clinician {
   pronouns?: string;
   /** A plain credential line, e.g. "Psychiatric nurse practitioner". */
   credential: string;
+  /** The role, as an id, for the role explainer. */
+  role: ClinicianRole;
   photoUrl?: string;
   /** Declared fit (evidence tier 1): topics the clinician says they focus on. */
   specialties: TopicId[];
@@ -50,5 +56,5 @@ export interface Clinician {
   fullyBooked?: boolean;
 }
 
-/** Outcomes are only shown (evidence tier 3) when the cohort is at least this large. */
-export const MIN_OUTCOME_COHORT = 30;
+/** Outcomes (evidence tier 3) appear only in the profile, and only when the cohort is at least this large. */
+export const MIN_OUTCOME_COHORT = 50;

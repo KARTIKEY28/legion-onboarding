@@ -4,15 +4,25 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getTracker } from "@/analytics/client";
 import { trackOnce } from "@/analytics/hooks";
-import { evidenceLine, reasonsTemplate } from "@/ai/matchReasons";
+import { cardEvidenceLine, reasonsTemplate } from "@/ai/matchReasons";
 import { templateReflection, type ReflectInput, type Reflection } from "@/ai/reflect";
-import { allRanked, matchClinicians, matchInputFromAnswers, type MatchInput, type RankedMatch } from "@/clinicians/match";
-import { AVAILABILITY_WINDOWS, LANGUAGES } from "@/clinicians/model";
+import {
+  allRanked,
+  cardEvidence,
+  displayMatches,
+  matchClinicians,
+  matchInputFromAnswers,
+  widenGains,
+  type MatchInput,
+  type RankedMatch,
+} from "@/clinicians/match";
 import type { EvidenceTier } from "@/clinicians/match";
 import type { Slot } from "@/clinicians/schedule";
+import { concernPhrase, languagePhrase, windowWord } from "@/data/phrases";
 import { LoadingScreen, Progress, Screen, TextLink } from "@/components/ui";
+import { formatCentral } from "@/time";
 import { slotTakenArmed } from "@/devtoggles";
-import { conditionTopics, samplePayers } from "@/facts";
+import { samplePayers } from "@/facts";
 import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
 
 const tierKey = (e: EvidenceTier) => (e.tier === 3 ? "outcomes" : e.tier === 2 ? "experience" : "declared_fit");
@@ -58,8 +68,8 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
   const result = useMemo(() => matchClinicians(input, now), [input, now]);
 
   const [noneSelected, setNoneSelected] = useState(false);
-  const showClosest = !result.strong || noneSelected;
-  const matches = result.matches;
+  const noStrong = result.noStrongMatch || noneSelected;
+  const cards = noneSelected ? allRanked(input, now).slice(0, 3) : displayMatches(result);
 
   const [showAll, setShowAll] = useState(false);
   const [takenFor, setTakenFor] = useState<string | null>(null);
@@ -68,18 +78,18 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
 
   // match.viewed once, with the real counts.
   useEffect(() => {
-    trackOnce("match.viewed", "match.viewed", { match_count: result.matches.length, no_strong_match: showClosest });
+    trackOnce("match.viewed", "match.viewed", { match_count: cards.length, no_strong_match: noStrong });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The model-phrased headline, template on anything slow or failing. Labels only.
+  // The model-phrased headline, template on anything slow or failing. Phrases only.
   useEffect(() => {
     let cancelled = false;
     const labels: ReflectInput = {
       step: "match",
-      topics: baseInput.topics.map((t) => conditionTopics.value.find((x) => x.id === t)?.label ?? t),
-      windows: baseInput.windows.map((w) => AVAILABILITY_WINDOWS.find((x) => x.id === w)?.label ?? w),
-      language: baseInput.language ? LANGUAGES.find((l) => l.id === baseInput.language)?.label : undefined,
+      topics: baseInput.topics.map((t) => concernPhrase[t]),
+      windows: baseInput.windows.map((w) => windowWord[w]),
+      language: baseInput.language ? languagePhrase[baseInput.language] : undefined,
       payer: baseInput.payerId ? samplePayers.value.find((p) => p.id === baseInput.payerId)?.label : undefined,
     };
     fetchHeadline(labels).then((r) => {
@@ -119,6 +129,8 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
     setShowAll(false);
   }
 
+  const strong = noneSelected ? [] : result.strongMatches.slice(0, 3);
+  const also = noneSelected ? [] : result.alsoAvailable;
   const fullList = showAll ? allRanked(input, now) : [];
 
   return (
@@ -136,27 +148,67 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
         <p className="text-sm text-ink-muted">Written from your answers.</p>
       </div>
 
-      {showClosest && (
+      {noStrong && (
         <p role="status" className="rounded-md bg-accent-soft px-4 py-3">
-          We couldn&apos;t find a strong match for everything you asked for, so here are the closest available clinicians.
-          You can widen your search below.
+          We couldn&apos;t find a clinician who fits everything you asked for. Here are the closest options, and you can
+          widen your search.
         </p>
       )}
 
       {!showAll && (
-        <ul className="flex flex-col gap-4">
-          {matches.map((match, i) => (
-            <li key={match.clinician.id}>
-              <ClinicianCard
-                match={match}
-                closest={showClosest}
-                taken={takenFor === match.clinician.id}
-                onPick={(slot) => choose(match, slot, "top_match", i + 1)}
-                onChooseAnother={() => setTakenFor(null)}
-              />
-            </li>
-          ))}
-        </ul>
+        <>
+          {noStrong ? (
+            <ul className="flex flex-col gap-4">
+              {cards.map((match, i) => (
+                <li key={match.clinician.id}>
+                  <ClinicianCard
+                    match={match}
+                    filler
+                    taken={takenFor === match.clinician.id}
+                    onPick={(slot) => choose(match, slot, "top_match", i + 1)}
+                    onChooseAnother={() => setTakenFor(null)}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <>
+              <ul className="flex flex-col gap-4">
+                {strong.map((match, i) => (
+                  <li key={match.clinician.id}>
+                    <ClinicianCard
+                      match={match}
+                      filler={false}
+                      taken={takenFor === match.clinician.id}
+                      onPick={(slot) => choose(match, slot, "top_match", i + 1)}
+                      onChooseAnother={() => setTakenFor(null)}
+                    />
+                  </li>
+                ))}
+              </ul>
+              {also.length > 0 && (
+                <div className="flex flex-col gap-4 border-t border-line pt-4">
+                  <p className="text-sm text-ink-muted">
+                    Also available. These don&apos;t match everything you asked for, but they have openings.
+                  </p>
+                  <ul className="flex flex-col gap-4">
+                    {also.map((match, i) => (
+                      <li key={match.clinician.id}>
+                        <ClinicianCard
+                          match={match}
+                          filler
+                          taken={takenFor === match.clinician.id}
+                          onPick={(slot) => choose(match, slot, "top_match", strong.length + i + 1)}
+                          onChooseAnother={() => setTakenFor(null)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+        </>
       )}
 
       {showAll && (
@@ -167,7 +219,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
               <li key={match.clinician.id}>
                 <ClinicianCard
                   match={match}
-                  closest
+                  filler={!match.strong}
                   taken={takenFor === match.clinician.id}
                   onPick={(slot) => choose(match, slot, "full_list", i + 1)}
                   onChooseAnother={() => setTakenFor(null)}
@@ -178,9 +230,10 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
         </section>
       )}
 
-      {showClosest ? (
+      {noStrong ? (
         <WidenAndHelp
           input={input}
+          now={now}
           answers={answers}
           onWiden={(patch) => setRelaxed((r) => ({ ...r, ...patch }))}
         />
@@ -208,21 +261,21 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
 
 function ClinicianCard({
   match,
-  closest,
+  filler,
   taken,
   onPick,
   onChooseAnother,
 }: {
   match: RankedMatch;
-  closest: boolean;
+  filler: boolean;
   taken: boolean;
   onPick: (slot: Slot) => void;
   onChooseAnother: () => void;
 }) {
-  const { clinician, evidence, facts, slots } = match;
+  const { clinician, facts, slots } = match;
   const reasons = reasonsTemplate(facts);
-  const evLine = evidenceLine(evidence);
-  const remaining = taken ? slots.slice(1) : slots;
+  const evLine = cardEvidenceLine(cardEvidence(clinician), facts);
+  const remaining = taken ? slots.slice(1) : slots.slice(0, 2);
 
   return (
     <article className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
@@ -231,10 +284,8 @@ function ClinicianCard({
           {clinician.name} {clinician.pronouns && <span className="font-normal text-ink-muted">({clinician.pronouns})</span>}
         </h2>
         <p className="text-sm text-ink-muted">{clinician.credential}</p>
-        {closest && <p className="text-sm text-ink-muted">Closest available</p>}
+        {filler && <p className="text-sm text-ink-muted">Also available</p>}
       </div>
-
-      <p>{clinician.bio}</p>
 
       {reasons.length > 0 && (
         <ul className="flex flex-col gap-1">
@@ -253,13 +304,13 @@ function ClinicianCard({
 
       {taken && (
         <p role="status" className="rounded-md bg-accent-soft px-3 py-2 text-sm">
-          That time was just taken — nothing holds a slot until you book. Here are the next openings, or you can choose
+          That time was just taken. Nothing holds a slot until you book. Here are the next openings, or you can choose
           another clinician.
         </p>
       )}
 
       <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium">{taken ? "Next openings" : "Next openings"}</p>
+        <p className="text-sm font-medium">Next openings</p>
         {remaining.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {remaining.map((slot) => (
@@ -269,7 +320,7 @@ function ClinicianCard({
                 onClick={() => onPick(slot)}
                 className="min-h-11 rounded-md border border-accent bg-accent-soft px-4 py-2 text-base font-medium"
               >
-                {slot.label}
+                {formatCentral(slot.iso)}
               </button>
             ))}
           </div>
@@ -288,22 +339,29 @@ function ClinicianCard({
 
 function WidenAndHelp({
   input,
+  now,
   answers,
   onWiden,
 }: {
   input: MatchInput;
+  now: Date;
   answers: SessionAnswers;
   onWiden: (patch: Partial<MatchInput>) => void;
 }) {
+  const gains = widenGains(input, now);
   return (
     <section aria-label="Widen your search" className="flex flex-col gap-3 border-t border-line pt-4">
       <h2 className="text-lg font-semibold">Widen your search</h2>
       <div className="flex flex-wrap gap-2">
-        {input.windows.length > 0 && (
-          <WidenButton label="Any time of day" onClick={() => onWiden({ windows: [] })} />
+        {input.windows.length > 0 && gains.any_time && (
+          <WidenButton label={`Any time of day (+${gains.any_time})`} onClick={() => onWiden({ windows: [] })} />
         )}
-        {input.gender && <WidenButton label="Any clinician gender" onClick={() => onWiden({ gender: undefined })} />}
-        {input.language && <WidenButton label="Any language" onClick={() => onWiden({ language: undefined })} />}
+        {input.language && gains.any_language && (
+          <WidenButton label={`Any language (+${gains.any_language})`} onClick={() => onWiden({ language: undefined })} />
+        )}
+        {input.gender && gains.any_gender && (
+          <WidenButton label={`Any clinician gender (+${gains.any_gender})`} onClick={() => onWiden({ gender: undefined })} />
+        )}
       </div>
       <p className="text-ink-muted">
         Prefer to talk to someone?{" "}
@@ -330,6 +388,7 @@ function WidenButton({ label, onClick }: { label: string; onClick: () => void })
 }
 
 function NotifyMe({ initialEmail }: { initialEmail?: string }) {
+  const [open, setOpen] = useState(false);
   const [email, setEmail] = useState(initialEmail ?? "");
   const [saved, setSaved] = useState(Boolean(initialEmail));
   const [error, setError] = useState<string>();
@@ -350,6 +409,14 @@ function NotifyMe({ initialEmail }: { initialEmail?: string }) {
       <p role="status" className="text-ink-muted">
         Saved. We&apos;ll email {email} if more openings come up. In this prototype, nothing is sent.
       </p>
+    );
+  }
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="self-start text-accent underline underline-offset-2">
+        Tell me when more openings come up
+      </button>
     );
   }
 
@@ -376,7 +443,7 @@ function NotifyMe({ initialEmail }: { initialEmail?: string }) {
         aria-invalid={Boolean(error)}
         className={`min-h-11 rounded-md border bg-surface px-3 text-base ${error ? "border-danger" : "border-line"}`}
       />
-      <button type="submit" className="min-h-11 self-start rounded-md bg-accent px-6 py-2 font-medium text-accent-ink">
+      <button type="submit" className="min-h-11 self-start rounded-md border border-accent bg-surface px-6 py-2 font-medium text-accent">
         Email me
       </button>
     </form>
