@@ -91,7 +91,7 @@ function AccountForm() {
       <Progress step="account" />
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">Create your account</h1>
-        <p className="text-ink-muted">So we can hold your details and send your sign-in link. Nothing is booked or charged yet.</p>
+        <p className="text-ink-muted">So we can save your details and send your sign-in link. Nothing is booked or charged yet.</p>
       </div>
 
       {saved.selectedClinician && (
@@ -137,7 +137,11 @@ function AccountForm() {
               Edit
             </TextLink>
           </div>
-          <p className="text-sm text-ink-muted">From the About you step. We only use it to confirm you&apos;re an adult.</p>
+          <p className="text-sm text-ink-muted">
+            {saved.insurance?.path === "self_pay"
+              ? "From the About you step. We use it to confirm you're an adult."
+              : "From the About you step. We use it to confirm you're an adult and to verify your insurance."}
+          </p>
         </div>
 
         <p className="rounded-md bg-surface px-4 py-3 text-sm text-ink-muted">
