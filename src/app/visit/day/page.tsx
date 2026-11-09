@@ -23,15 +23,16 @@ export default function DayOfVisitPage() {
           {ctx ? `Your visit with ${ctx.clinicianName} is ${formatCentral(ctx.slotIso)}.` : "Your visit is coming up."}
         </p>
       </div>
-      <DeviceCheck />
+      <DeviceCheck problem={demo.deviceProblem} />
       <JoinVisit />
     </AfterVisitScreen>
   );
 }
 
-function DeviceCheck() {
+function DeviceCheck({ problem }: { problem: boolean }) {
   const [ran, setRan] = useState(false);
-  const [failed, setFailed] = useState(false);
+  // The problem state is driven by the demo bar's "Device" toggle, not a patient control.
+  const failed = ran && problem;
   return (
     <section aria-label="Device check" className="flex flex-col gap-3 rounded-lg bg-surface p-4">
       <h2 className="text-lg font-semibold">Quick device check</h2>
@@ -45,15 +46,14 @@ function DeviceCheck() {
           </li>
         ))}
       </ul>
-      <div className="flex flex-wrap gap-3">
-        <button type="button" onClick={() => { setRan(true); setFailed(false); }} className="rounded-md border border-accent px-4 py-2 text-base font-medium text-accent">
-          Run check
-        </button>
-        <button type="button" onClick={() => { setRan(true); setFailed(true); }} className="rounded-md border border-line px-4 py-2 text-base">
-          Simulate a problem
-        </button>
-      </div>
-      {ran && failed && (
+      <button
+        type="button"
+        onClick={() => setRan(true)}
+        className="self-start rounded-md border border-accent px-4 py-2 text-base font-medium text-accent"
+      >
+        Run check
+      </button>
+      {failed && (
         <p role="status" className="rounded-md bg-danger-soft px-4 py-2 text-sm">
           Something isn&apos;t working? You can still join. Our team can help, or you can switch to a phone call. We won&apos;t let a
           device problem stop your visit.

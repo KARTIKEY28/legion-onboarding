@@ -2,7 +2,7 @@
 
 import { topicLabels, visitContext } from "@/aftervisit/answers";
 import { previsitEmails } from "@/aftervisit/content";
-import { AfterVisitScreen, useDemo } from "@/components/aftervisit";
+import { AfterVisitAction, AfterVisitScreen, useDemo } from "@/components/aftervisit";
 import { LoadingScreen } from "@/components/ui";
 import { useAnswers } from "@/session/store";
 
@@ -35,6 +35,7 @@ export default function PrevisitEmailPage() {
       ) : (
         <p className="text-ink-muted">Book a visit to preview your email.</p>
       )}
+      <AfterVisitAction href="/confirmation">Back to your visit</AfterVisitAction>
     </AfterVisitScreen>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import { useTrackOnce } from "@/analytics/hooks";
-import { AfterVisitScreen, setDemo, useDemo } from "@/components/aftervisit";
-import { LoadingScreen, TextLink } from "@/components/ui";
+import { AfterVisitAction, AfterVisitScreen, useDemo } from "@/components/aftervisit";
+import { LoadingScreen } from "@/components/ui";
 import { selfPayPrices } from "@/facts";
 import { useAnswers } from "@/session/store";
 
@@ -11,9 +11,7 @@ export default function VisitCompletePage() {
   const demo = useDemo();
   if (!answers) return <LoadingScreen />;
   return (
-    <AfterVisitScreen stepId="complete">
-      {demo.visitComplete ? <Completed /> : <Upcoming devLabel={process.env.NEXT_PUBLIC_SHOW_DEV_LABEL === "1"} />}
-    </AfterVisitScreen>
+    <AfterVisitScreen stepId="complete">{demo.visitComplete ? <Completed /> : <Upcoming />}</AfterVisitScreen>
   );
 }
 
@@ -33,15 +31,13 @@ function Completed() {
           <li>Follow-up visits are ${selfPayPrices.followUp.value} each. Book one whenever you&apos;re ready.</li>
           <li>You can message your care team any time between visits.</li>
         </ul>
-        <TextLink href="/confirmation" className="self-start">
-          Back to your booking
-        </TextLink>
       </section>
+      <AfterVisitAction href="/confirmation">Back to your booking</AfterVisitAction>
     </>
   );
 }
 
-function Upcoming({ devLabel }: { devLabel: boolean }) {
+function Upcoming() {
   return (
     <>
       <div className="flex flex-col gap-2">
@@ -50,15 +46,7 @@ function Upcoming({ devLabel }: { devLabel: boolean }) {
           Once your visit happens, this is where you&apos;ll pick up. Follow-ups, notes and booking again.
         </p>
       </div>
-      {devLabel && (
-        <button
-          type="button"
-          onClick={() => setDemo({ visitComplete: true })}
-          className="self-start rounded-md border border-dashed border-line px-4 py-2 text-sm text-ink-muted"
-        >
-          Dev: simulate completing the visit
-        </button>
-      )}
+      <AfterVisitAction href="/confirmation">Back to your booking</AfterVisitAction>
     </>
   );
 }

@@ -47,13 +47,11 @@ test("Start to Visit complete: the full funnel reaches the primary outcome", asy
   // After payment: walk the proposal screens to the end.
   await expect(page).toHaveURL(/\/confirmation$/);
   await expect(page.getByRole("heading", { name: "You're booked" })).toBeVisible();
-  await page.getByRole("link", { name: "Next: Before your visit" }).click();
+  await page.getByRole("link", { name: "Get ready for your visit" }).click();
   await expect(page.getByRole("heading", { name: "Before your visit" })).toBeVisible();
-  await page.getByRole("link", { name: "Next: Reminders" }).click();
-  await page.getByRole("link", { name: "Next: Pre-visit email" }).click();
-  await page.getByRole("link", { name: "Next: Day of the visit" }).click();
+  await page.getByRole("link", { name: "I'm ready for my visit" }).click();
+  await expect(page).toHaveURL(/\/visit\/day$/);
   await page.getByRole("button", { name: "Join video visit" }).click();
-  await page.getByRole("link", { name: "Next: Visit complete" }).click();
 
   // The funnel up to the visit fired (captured before the reload below clears
   // the in-session event log).
