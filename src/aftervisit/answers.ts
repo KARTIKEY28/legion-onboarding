@@ -56,5 +56,6 @@ export function visitContext(a: SessionAnswers, demo: typeof DEMO_DEFAULTS): Vis
     formsComplete: demo.formsComplete,
     path: a.insurance?.path ?? "not_sure",
     insuranceState: demo.insuranceState,
+    smsConsent: Boolean(a.patient?.smsConsent),
   };
 }

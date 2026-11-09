@@ -32,10 +32,17 @@ export default function RemindersPage() {
                   <p key={i} className="text-sm">{line}</p>
                 ))}
               </article>
-              <article className="flex flex-col gap-2 rounded-md border border-line bg-canvas p-3" aria-label="Text reminder">
-                <p className="text-sm font-medium text-ink-muted">Text message</p>
-                <p className="text-sm">{card.sms}</p>
-              </article>
+              {ctx.smsConsent ? (
+                <article className="flex flex-col gap-2 rounded-md border border-line bg-canvas p-3" aria-label="Text reminder">
+                  <p className="text-sm font-medium text-ink-muted">Text message</p>
+                  <p className="text-sm">{card.sms}</p>
+                </article>
+              ) : (
+                <article className="flex flex-col gap-2 rounded-md border border-line bg-canvas p-3 text-ink-muted" aria-label="Text reminder off">
+                  <p className="text-sm font-medium">Text message</p>
+                  <p className="text-sm">Text reminders are off. Turn them on with your phone number to also get these by text.</p>
+                </article>
+              )}
             </div>
           </section>
         ))

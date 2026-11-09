@@ -1,9 +1,9 @@
-import { cancellationLine } from "@/payment/summary";
+import { freeToRescheduleLine } from "@/payment/summary";
 import { formatCentral } from "@/time";
 
 /**
  * Content for the after-payment screens. All logistics, warm and plain, no
- * medical advice. The cancellation fee comes from the facts via cancellationLine.
+ * medical advice. The cancellation fee comes from the facts.
  */
 
 export interface VisitContext {
@@ -12,6 +12,13 @@ export interface VisitContext {
   formsComplete: boolean;
   path: "insured" | "self_pay" | "not_sure";
   insuranceState: "checking" | "confirmed" | "more_info";
+  /** Whether the patient opted in to SMS reminders (controls the text variant). */
+  smsConsent: boolean;
+}
+
+/** The clinician's first name, without a title like "Dr." */
+function clinicianFirst(name: string): string {
+  return name.replace(/^(dr\.?|mr\.?|ms\.?|mrs\.?)\s+/i, "").split(" ")[0];
 }
 
 // ---- Add to calendar (.ics) ----
@@ -49,37 +56,38 @@ export interface ReminderCard {
   sms: string;
 }
 
-function formsLine(formsComplete: boolean): string {
-  return formsComplete
-    ? "Your intake forms are done. Thank you."
-    : "You haven't filled your intake forms yet. They're optional and your visit happens either way.";
+/** A positive, direct forms nudge, only when the forms are not done. */
+function formsLine(ctx: VisitContext): string | null {
+  if (ctx.formsComplete) return null;
+  return `Your forms take a few minutes and help ${clinicianFirst(ctx.clinicianName)} prepare. [Complete your forms]`;
 }
 
-function insuranceLine(ctx: VisitContext): string {
-  if (ctx.path === "self_pay") return "You're paying without insurance.";
-  switch (ctx.insuranceState) {
-    case "confirmed":
-      return "Your insurance is confirmed.";
-    case "more_info":
-      return "We need a little more insurance information. Our team will follow up.";
-    default:
-      return "We're still checking your insurance.";
-  }
+/** Insurance is mentioned only when the patient needs to act. */
+function insuranceLine(ctx: VisitContext): string | null {
+  if (ctx.path === "self_pay") return null;
+  if (ctx.insuranceState === "more_info") return "We need a little more information about your insurance. [Add your details]";
+  return null;
 }
 
 export function reminderCards(ctx: VisitContext): ReminderCard[] {
   const when = formatCentral(ctx.slotIso);
-  const reschedule = "Need a different time? Reschedule from your account.";
-  const fee = cancellationLine();
-  const base = (lead: string): ReminderCard => ({
-    lead,
-    email: {
-      subject: `Your visit with ${ctx.clinicianName} is ${lead} away`,
-      body: [`Your video visit is ${when}.`, formsLine(ctx.formsComplete), insuranceLine(ctx), reschedule, fee],
-    },
-    sms: `Legion: your visit with ${ctx.clinicianName} is ${lead} away (${when}). ${reschedule} ${fee}`,
-  });
-  return [base("48 hours"), base("24 hours"), base("1 hour")];
+  const rescheduleLink = "Reschedule or cancel: [open your visit]";
+
+  const card = (lead: string, leadLine: string): ReminderCard => {
+    const body = [leadLine, `Your video visit is ${when}.`, formsLine(ctx), insuranceLine(ctx), rescheduleLink].filter(
+      (line): line is string => Boolean(line),
+    );
+    // One short SMS, kept well under 160 characters.
+    const sms = `Legion: your visit with ${clinicianFirst(ctx.clinicianName)} is ${lead} away, ${when}. Reschedule: [link]`;
+    return { lead, email: { subject: `Your visit with ${ctx.clinicianName} is ${lead} away`, body }, sms };
+  };
+
+  return [
+    // The 48-hour reminder leads with the free-to-reschedule cutoff.
+    card("48 hours", freeToRescheduleLine(ctx.slotIso)),
+    card("24 hours", `Your visit is 24 hours away. Here's everything you need.`),
+    card("1 hour", `Your visit is 1 hour away. Find a quiet, private spot and your join link.`),
+  ];
 }
 
 // ---- Pre-visit emails ----

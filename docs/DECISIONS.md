@@ -318,3 +318,12 @@ Each entry says what was decided, why, and how to undo it.
 | 207 | Under the visit card: "Need to change it? Reschedule or cancel" opens a simple simulated reschedule sheet with the clinician's next open times (picking one updates the booked slot). Above it: "Free to change until [cutoff]. After that, cancelling may cost $100." The cutoff is the visit time minus the 48-hour window, shown with weekday, date, time and CT; the fee comes from `src/facts/terms.ts` (the brief's `src/data/terms.ts`), never a literal | As briefed | `src/app/confirmation/page.tsx`, `cancellationCutoff`/`freeToChangeLine` in `src/payment/summary.ts` |
 | 208 | One payment line on Confirmation: "Your card is on file. You're charged about 5 days after your visit." Insured adds "We'll confirm your coverage before your visit." (facts-based) | As briefed | `cardOnFileLines` in `src/payment/summary.ts` |
 | 209 | Events `reschedule.opened` and `reschedule.completed` added (no times or PII) | Measurement plan | `src/analytics/schema.ts`, `e2e/slice7.spec.ts` |
+
+## Demo/honesty/polish pass — Part 6: Reminders
+
+| # | Decision | Why | To change it |
+| --- | --- | --- | --- |
+| 210 | The 48-hour reminder leads with the free-to-reschedule cutoff: "Free to reschedule until [cutoff]. After that, cancelling may cost $100." (cutoff and fee from the facts). Every reminder carries a direct reschedule link | As briefed | `reminderCards` in `src/aftervisit/content.ts`, `freeToRescheduleLine` in `src/payment/summary.ts` |
+| 211 | The forms nudge is positive and direct ("Your forms take a few minutes and help [first name] prepare. [Complete your forms]"), uses the clinician's first name without a title, and is shown only when forms are not done. Never "You haven't…" | As briefed | `src/aftervisit/content.ts` |
+| 212 | Insurance is mentioned in a reminder only when the patient must act ("We need a little more information about your insurance. [Add your details]"); "checking" and "confirmed" are silent, never "still checking" | As briefed | `src/aftervisit/content.ts` |
+| 213 | Each reminder text message is kept under 160 characters (a unit test enforces it). The text variant is shown only when the patient gave SMS consent; otherwise reminders are email only, with a note on how to turn text on | As briefed; SMS only with consent | `src/aftervisit/content.ts`, `src/app/visit/reminders/page.tsx`, `src/aftervisit/content.test.ts` |
