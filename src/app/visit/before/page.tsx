@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { previsitInput, availabilityLabels, topicLabels } from "@/aftervisit/answers";
-import { AfterVisitScreen, useDemo } from "@/components/aftervisit";
+import { AfterVisitAction, AfterVisitScreen, useDemo } from "@/components/aftervisit";
 import { LoadingScreen } from "@/components/ui";
 import { flags } from "@/flags";
 import { useAnswers, type SessionAnswers } from "@/session/store";
@@ -25,6 +25,7 @@ export default function BeforeVisitPage() {
       <InsuranceStatus path={answers.insurance?.path ?? "not_sure"} />
       <OutsideRecords />
       <VideoLink />
+      <AfterVisitAction href="/visit/day">I&apos;m ready for my visit</AfterVisitAction>
     </AfterVisitScreen>
   );
 }

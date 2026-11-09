@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { CrisisHelp } from "@/components/CrisisHelp";
+import { DemoBar } from "@/components/DemoBar";
 import { DevLabel } from "@/components/ui";
 import "./globals.css";
 
@@ -32,6 +33,7 @@ export default function RootLayout({
             Draftbit (CC0). Not photos of real people.
           </p>
         </footer>
+        <DemoBar />
       </body>
     </html>
   );

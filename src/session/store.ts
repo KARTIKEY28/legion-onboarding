@@ -67,12 +67,18 @@ export interface SessionAnswers {
   returningPatient?: boolean;
   /** Set once the visit is booked on the Payment step. */
   booked?: boolean;
+  /** Account details (names, phone, SMS consent), prefilled by the demo persona. Never logged. */
+  patient?: { firstName?: string; lastName?: string; phone?: string; smsConsent?: boolean };
   /** Slice-7 demo controls (dev only): simulated time, insurance status, forms and visit state. */
   demo?: {
     clock?: "far" | "48h" | "24h" | "1h" | "visit";
     insuranceState?: "checking" | "confirmed" | "more_info";
     formsComplete?: boolean;
     visitComplete?: boolean;
+    /** Simulate the chosen slot being taken at booking. */
+    slotTaken?: boolean;
+    /** Simulate a device-check problem on the day-of screen. */
+    deviceProblem?: boolean;
   };
   /** Keys of events already fired this session, so each fires once. */
   fired?: string[];
