@@ -294,3 +294,10 @@ Each entry says what was decided, why, and how to undo it.
 | 200e | "Nothing you add is stored after this preview" / "Not stored" (photo ID) — TRUE: the sample is a static SVG; nothing is uploaded or kept | | `src/app/visit/before/page.tsx` |
 | 200f | Insurance before-visit states ("verifying now", "we'll email you") and "message your care team any time" — aspirational real-product behavior on screens already labeled "Design proposal, not Legion's current experience"; left as proposal copy | | `src/app/visit/before/page.tsx`, `src/app/visit/complete/page.tsx` |
 | 200g | Account existing-email flow "Check your inbox. We've sent a sign-in link" — simulated result of the patient's own "Send me a sign-in link" click; kept, since it represents that action (no auto-claim). Flagged here for Legion to confirm the real send | | `src/app/account/page.tsx` |
+
+## Demo/honesty/polish pass — Part 3: avatars
+
+| # | Decision | Why | To change it |
+| --- | --- | --- | --- |
+| 201 | Portraits keep the DiceBear "personas" style (CC0, no license change) but lock the options so a clinician looks calm and professional: eyes limited to open/happy (no glasses, no sunglasses), mouth limited to smile/smirk/lips (no pacifier or other accessories), and muted, low-saturation backgrounds. The seed stays fixed per clinician (its id); a `PORTRAIT_SEED` override map is available but all 12 were reviewed and need none | "A clinician must look calm and professional at the moment of commitment" | `src/clinicians/portrait.ts` |
+| 202 | A Playwright test asserts no page scrolls horizontally at 390x844 (all sixteen patient routes). The footer attribution wraps within the column | "Fix the footer attribution line overflowing horizontally on mobile … Add a Playwright check that no page has horizontal scroll" | `e2e/viewport.spec.ts` |
