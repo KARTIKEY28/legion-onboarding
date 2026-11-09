@@ -53,7 +53,7 @@ test("account: email is prefilled, DOB is read-only with Edit, no password, crea
 
   await page.getByLabel("First name").fill("Alex");
   await page.getByLabel("Last name").fill("Rivera");
-  await page.getByLabel("Phone").fill("555-0100");
+  // Phone is optional; leaving it blank still creates the account.
   await page.getByRole("button", { name: "Continue to payment" }).click();
 
   await expect(page).toHaveURL(/\/payment$/);
@@ -61,7 +61,39 @@ test("account: email is prefilled, DOB is read-only with Edit, no password, crea
 
   const fired = await events(page);
   expect(fired.filter((e) => e.event === "account.viewed")).toHaveLength(1);
-  expect(fired.filter((e) => e.event === "account.created").map((e) => e.properties)).toEqual([{ email_prefilled: true }]);
+  expect(fired.filter((e) => e.event === "account.created").map((e) => e.properties)).toEqual([
+    { email_prefilled: true, phone_given: false, sms_consent: false },
+  ]);
+});
+
+test("account: a phone adds an SMS consent checkbox; consent is recorded as a boolean", async ({ page }) => {
+  await seed(page, PICKED);
+  await page.goto("/account");
+  await page.getByLabel("First name").fill("Alex");
+  await page.getByLabel("Last name").fill("Rivera");
+
+  // No consent checkbox until a phone is entered.
+  await expect(page.getByText(/Text me visit reminders/)).toHaveCount(0);
+  await page.getByLabel("Phone").fill("5550100142");
+  await expect(page.getByLabel("Phone")).toHaveValue("(555) 010-0142");
+  await page.getByText(/Text me visit reminders/).click();
+
+  await page.getByRole("button", { name: "Continue to payment" }).click();
+  await expect(page).toHaveURL(/\/payment$/);
+  expect((await events(page)).filter((e) => e.event === "account.created").map((e) => e.properties)).toEqual([
+    { email_prefilled: true, phone_given: true, sms_consent: true },
+  ]);
+});
+
+test("account: a short phone number gets a calm error", async ({ page }) => {
+  await seed(page, PICKED);
+  await page.goto("/account");
+  await page.getByLabel("First name").fill("Alex");
+  await page.getByLabel("Last name").fill("Rivera");
+  await page.getByLabel("Phone").fill("555010");
+  await page.getByRole("button", { name: "Continue to payment" }).click();
+  await expect(page).not.toHaveURL(/\/payment$/);
+  await expect(page.getByText(/phone number looks short/)).toBeVisible();
 });
 
 test("account: missing details get calm errors", async ({ page }) => {
@@ -81,7 +113,6 @@ test("account: an already-registered email offers a sign-in link and creates no 
   await page.getByLabel("First name").fill("Alex");
   await page.getByLabel("Last name").fill("Rivera");
   await page.getByLabel("Email").fill("returning@example.com");
-  await page.getByLabel("Phone").fill("555-0100");
   await page.getByRole("button", { name: "Continue to payment" }).click();
 
   await expect(page).not.toHaveURL(/\/payment$/);
@@ -96,13 +127,14 @@ test("no event carries a name, email, phone or date of birth", async ({ page }) 
   await page.goto("/account");
   await page.getByLabel("First name").fill("Alex");
   await page.getByLabel("Last name").fill("Rivera");
-  await page.getByLabel("Phone").fill("555-0100");
+  await page.getByLabel("Phone").fill("5550100142");
+  await page.getByText(/Text me visit reminders/).click();
   await page.getByRole("button", { name: "Continue to payment" }).click();
   await expect(page).toHaveURL(/\/payment$/);
 
   const fired = await events(page);
   const serialized = JSON.stringify(fired.map(({ event, step, device_type, properties }) => ({ event, step, device_type, properties })));
-  for (const forbidden of ["Alex", "Rivera", "patient@example.com", "555-0100", "1990", "04/15"]) {
+  for (const forbidden of ["Alex", "Rivera", "patient@example.com", "5550100142", "010-0142", "1990", "04/15"]) {
     expect(serialized, `events must not contain "${forbidden}"`).not.toContain(forbidden);
   }
   for (const event of fired) {

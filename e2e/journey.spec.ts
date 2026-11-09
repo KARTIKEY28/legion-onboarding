@@ -33,7 +33,7 @@ test("Start to Visit complete: the full funnel reaches the primary outcome", asy
   await page.getByLabel("First name").fill("Alex");
   await page.getByLabel("Last name").fill("Rivera");
   await page.getByLabel("Email").fill("alex@example.com");
-  await page.getByLabel("Phone").fill("555-0100");
+  await page.getByLabel("Phone").fill("5550100142");
   await page.getByRole("button", { name: "Continue to payment" }).click();
 
   // Payment

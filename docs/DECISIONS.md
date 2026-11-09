@@ -301,3 +301,11 @@ Each entry says what was decided, why, and how to undo it.
 | --- | --- | --- | --- |
 | 201 | Portraits keep the DiceBear "personas" style (CC0, no license change) but lock the options so a clinician looks calm and professional: eyes limited to open/happy (no glasses, no sunglasses), mouth limited to smile/smirk/lips (no pacifier or other accessories), and muted, low-saturation backgrounds. The seed stays fixed per clinician (its id); a `PORTRAIT_SEED` override map is available but all 12 were reviewed and need none | "A clinician must look calm and professional at the moment of commitment" | `src/clinicians/portrait.ts` |
 | 202 | A Playwright test asserts no page scrolls horizontally at 390x844 (all sixteen patient routes). The footer attribution wraps within the column | "Fix the footer attribution line overflowing horizontally on mobile … Add a Playwright check that no page has horizontal scroll" | `e2e/viewport.spec.ts` |
+
+## Demo/honesty/polish pass — Part 4: Account
+
+| # | Decision | Why | To change it |
+| --- | --- | --- | --- |
+| 203 | Account fields carry autocomplete (given-name, family-name, email, tel) and inputMode (email, tel), and each gets a one-line reason: Email "For your confirmation and sign-in link."; Phone "Optional. For text reminders before your visit." | As briefed | `src/app/account/page.tsx` |
+| 204 | **Phone is optional** and lightly formatted as the patient types ((555) 010-0142); a too-short number gets a calm "looks short … or leave it blank." error, an empty one passes. When a phone is entered, an unchecked consent box appears: "Text me visit reminders. Message and data rates may apply. Reply STOP to opt out." Text reminders are shown later only if consent was given | As briefed; SMS only with explicit opt-in | `src/app/account/page.tsx` |
+| 205 | `account.created` gains `phone_given` and `sms_consent` (booleans only, never the number); names and phone are stored under `patient` in the session and never logged. A test asserts the phone digits never appear in any event | Measurement plan; no PII | `src/analytics/schema.ts`, `e2e/slice6.spec.ts` |

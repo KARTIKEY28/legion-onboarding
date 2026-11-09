@@ -7,7 +7,7 @@ import { maskedFromFields } from "@/components/form";
 import { Portrait } from "@/components/Portrait";
 import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, TextLink, barPrimary } from "@/components/ui";
 import { formatCentral } from "@/time";
-import { getAnswers, useAnswers } from "@/session/store";
+import { getAnswers, updateAnswers, useAnswers } from "@/session/store";
 
 /**
  * Account step. No password: Legion emails a sign-in link after booking, so the
@@ -26,6 +26,17 @@ import { getAnswers, useAnswers } from "@/session/store";
 const REGISTERED_EMAILS = new Set(["returning@example.com", "existing@example.com"]);
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Light US phone formatting as the patient types: (555) 010-0142. */
+function formatPhone(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 10);
+  if (!d) return "";
+  if (d.length < 4) return `(${d}`;
+  if (d.length < 7) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
+const phoneDigits = (value: string) => value.replace(/\D/g, "");
 
 export default function AccountPage() {
   const answers = useAnswers();
@@ -46,17 +57,27 @@ function AccountForm() {
   const prefilledEmail = saved.notifyEmail ?? "";
   const dob = saved.dob ? maskedFromFields(saved.dob) : "";
 
-  const [fields, setFields] = useState<Fields>({ firstName: "", lastName: "", email: prefilledEmail, phone: "" });
+  const [fields, setFields] = useState<Fields>({
+    firstName: saved.patient?.firstName ?? "",
+    lastName: saved.patient?.lastName ?? "",
+    email: prefilledEmail,
+    phone: saved.patient?.phone ?? "",
+  });
+  const [smsConsent, setSmsConsent] = useState(Boolean(saved.patient?.smsConsent));
   const [errors, setErrors] = useState<Partial<Record<keyof Fields, string>>>({});
   const [existing, setExisting] = useState(false);
   const [linkSent, setLinkSent] = useState(false);
 
   useTrackOnce("account.viewed", "account.viewed");
 
+  const hasPhone = phoneDigits(fields.phone).length > 0;
+
   const set = (key: keyof Fields) => (value: string) => {
-    setFields((f) => ({ ...f, [key]: value }));
+    const next = key === "phone" ? formatPhone(value) : value;
+    setFields((f) => ({ ...f, [key]: next }));
     setErrors((e) => ({ ...e, [key]: undefined }));
     if (key === "email") setExisting(false);
+    if (key === "phone" && phoneDigits(next).length === 0) setSmsConsent(false);
   };
 
   const validate = (f: Fields): Partial<Record<keyof Fields, string>> => {
@@ -65,7 +86,9 @@ function AccountForm() {
     if (!f.lastName.trim()) next.lastName = "Please add your last name.";
     if (!f.email.trim()) next.email = "Please add your email.";
     else if (!EMAIL_RE.test(f.email.trim())) next.email = "That email doesn't look right. Please check it.";
-    if (!f.phone.trim()) next.phone = "Please add a phone number.";
+    // Phone is optional; only check it when one was entered.
+    const digits = phoneDigits(f.phone);
+    if (digits.length > 0 && digits.length < 10) next.phone = "That phone number looks short. Please check it, or leave it blank.";
     return next;
   };
 
@@ -82,7 +105,22 @@ function AccountForm() {
       setExisting(true);
       return;
     }
-    trackOnce("account.created", "account.created", { email_prefilled: emailWasPrefilled });
+    const phoneGiven = phoneDigits(fields.phone).length === 10;
+    const consent = phoneGiven && smsConsent;
+    // Names and phone stay in the session (never logged); reminders use the consent.
+    updateAnswers({
+      patient: {
+        firstName: fields.firstName.trim(),
+        lastName: fields.lastName.trim(),
+        phone: phoneGiven ? fields.phone : undefined,
+        smsConsent: consent,
+      },
+    });
+    trackOnce("account.created", "account.created", {
+      email_prefilled: emailWasPrefilled,
+      phone_given: phoneGiven,
+      sms_consent: consent,
+    });
     router.push("/payment");
   }
 
@@ -123,9 +161,36 @@ function AccountForm() {
           value={fields.email}
           onChange={set("email")}
           error={errors.email}
-          note={emailWasPrefilled ? "From the email you gave us earlier. Change it if you'd like." : undefined}
+          note={
+            emailWasPrefilled
+              ? "For your confirmation and sign-in link. From the email you gave us earlier; change it if you'd like."
+              : "For your confirmation and sign-in link."
+          }
         />
-        <Field id="phone" label="Phone" type="tel" inputMode="tel" autoComplete="tel" value={fields.phone} onChange={set("phone")} error={errors.phone} />
+        <Field
+          id="phone"
+          label="Phone"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          value={fields.phone}
+          onChange={set("phone")}
+          error={errors.phone}
+          note="Optional. For text reminders before your visit."
+        />
+
+        {hasPhone && (
+          <label htmlFor="sms-consent" className="flex items-start gap-3 rounded-md bg-surface px-4 py-3 text-sm">
+            <input
+              id="sms-consent"
+              type="checkbox"
+              checked={smsConsent}
+              onChange={(e) => setSmsConsent(e.target.checked)}
+              className="mt-0.5 h-5 w-5 shrink-0"
+            />
+            <span>Text me visit reminders. Message and data rates may apply. Reply STOP to opt out.</span>
+          </label>
+        )}
 
         <div className="flex flex-col gap-1">
           <span className="text-lg font-semibold">Date of birth</span>
