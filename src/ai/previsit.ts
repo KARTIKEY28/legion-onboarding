@@ -2,9 +2,11 @@ import { z } from "zod";
 
 /**
  * "Your story, ready for your clinician" (AI feature). A short pre-visit summary
- * drafted ONLY from the patient's structured onboarding answers (the condition
- * topics and preferences they picked), for the patient to read, edit and choose
- * to share. No free text is sent, so no identifiers can leak; the model only
+ * drafted from the patient's onboarding answers: the condition topics and
+ * preferences they picked, plus anything they wrote in their own words AFTER it
+ * is redacted (identifiers removed) and cleared by the local safety check. That
+ * is what makes the on-screen promise ("we use it to draft your visit summary")
+ * true while keeping identifiers out of the model (principle 5). The model only
  * phrases, never diagnoses or advises. A deterministic template is always ready
  * and is used on any error, a missing key, a slow answer or a failed check.
  */
@@ -14,6 +16,8 @@ export const previsitInputSchema = z.object({
   availability: z.array(z.string().max(40)).max(10),
   language: z.string().max(40).optional(),
   genderPref: z.string().max(40).optional(),
+  /** The patient's own words, already redacted and safety-checked by the caller. */
+  note: z.string().max(1000).optional(),
   path: z.enum(["insured", "self_pay", "not_sure"]),
 });
 
@@ -48,6 +52,7 @@ export function templateSummary(input: PrevisitInput): string {
   if (input.availability.length) parts.push(`Times that work for me: ${list(input.availability)}.`);
   if (input.language) parts.push(`I'd prefer to talk in ${input.language}.`);
   if (input.genderPref) parts.push(`I'd feel most comfortable with a ${input.genderPref} clinician.`);
+  if (input.note?.trim()) parts.push(`In my own words: ${input.note.trim()}`);
   parts.push(input.path === "self_pay" ? "I'm paying without insurance." : "I'm planning to use my insurance.");
   return parts.join(" ");
 }
@@ -59,6 +64,7 @@ export function summaryFacts(input: PrevisitInput): string {
     `Times that suit them: ${input.availability.join("; ") || "any"}`,
     `Preferred language: ${input.language || "no preference"}`,
     `Preferred clinician gender: ${input.genderPref || "no preference"}`,
+    `In their own words (already redacted): ${input.note?.trim() || "nothing added"}`,
     `Payment: ${input.path === "self_pay" ? "without insurance" : "using insurance"}`,
   ].join("\n");
 }

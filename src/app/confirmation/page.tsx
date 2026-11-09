@@ -97,8 +97,8 @@ function Confirmed({
 
       <p className="rounded-md bg-surface px-4 py-3 text-sm text-ink-muted">
         {returning
-          ? "That email already has an account, so we've sent you a sign-in link instead of making a new one."
-          : "We've emailed you a link to sign in and confirm your email."}
+          ? "That email already has an account, so we'll send you a sign-in link instead of making a new one."
+          : "We'll email you a link to sign in and confirm your email."}
       </p>
 
       <TextLink href="/visit/before" className="self-start">

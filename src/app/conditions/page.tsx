@@ -109,7 +109,7 @@ function ConditionsForm({ initial }: { initial: SessionAnswers["conditions"] }) 
           <SafeFreeText
             id="conditions-text"
             label="In your own words (optional)"
-            hint="Share as much or as little as you like. Only your care team would read this."
+            hint="Share as much or as little as you like. Read by your care team. We also check it for safety concerns and use it to draft your visit summary."
             value={freeText}
             onChange={setFreeText}
             step="conditions"

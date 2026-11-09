@@ -1,4 +1,6 @@
 import type { PrevisitInput } from "@/ai/previsit";
+import { removeIdentifiers } from "@/ai/redact";
+import { localSafetyCheck } from "@/safety/local";
 import { AVAILABILITY_WINDOWS, CLINICIAN_GENDERS, LANGUAGES } from "@/clinicians/model";
 import { conditionTopics } from "@/facts";
 import type { SessionAnswers } from "@/session/store";
@@ -27,12 +29,20 @@ function genderLabel(a: SessionAnswers): string | undefined {
   return id ? (CLINICIAN_GENDERS.find((g) => g.id === id)?.label ?? id) : undefined;
 }
 
+/** The patient's own words, redacted and only if the local safety check clears them. */
+function safeNote(a: SessionAnswers): string | undefined {
+  const raw = [a.conditions?.freeText, a.needs?.note].filter(Boolean).join(" ").trim();
+  if (!raw || localSafetyCheck(raw).concern) return undefined;
+  return removeIdentifiers(raw);
+}
+
 export function previsitInput(a: SessionAnswers): PrevisitInput {
   return {
     topics: topicLabels(a),
     availability: availabilityLabels(a),
     language: languageLabel(a),
     genderPref: genderLabel(a),
+    note: safeNote(a),
     path: a.insurance?.path ?? "not_sure",
   };
 }

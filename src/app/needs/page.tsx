@@ -113,7 +113,7 @@ function NeedsForm({ initial }: { initial: SessionAnswers["needs"] }) {
         <SafeFreeText
           id="needs-note"
           label="Anything else you want your clinician to know? (optional)"
-          hint="For example, something that would help you feel comfortable. Only your care team would read this."
+          hint="For example, something that would help you feel comfortable. Read by your care team. We also check it for safety concerns and use it to draft your visit summary."
           value={note}
           onChange={setNote}
           step="needs"
