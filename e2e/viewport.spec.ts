@@ -39,3 +39,52 @@ test("the primary action is in the viewport at every step (390x844)", async ({ p
   await expect(page.getByText("Step 8 of 10 · Cost and terms")).toBeVisible();
   await expect(page.getByRole("link", { name: "Continue to create your account" })).toBeInViewport();
 });
+
+const FULL_PERSONA = {
+  inTexas: "yes",
+  dob: { month: "03", day: "14", year: "1992" },
+  conditions: { topics: ["low_mood", "worry"], unsure: false, skipped: false },
+  safety: { recentThoughts: "no" },
+  needs: { availability: ["weekday_mornings"] },
+  insurance: { path: "insured", payerId: "sample_insurance", memberId: "SAMPLE123" },
+  notifyEmail: "alex.rivera@example.com",
+  patient: { firstName: "Alex", lastName: "Rivera", phone: "(555) 010-0142" },
+  selectedClinician: { id: "c1", name: "Dana Whitfield" },
+  selectedSlot: { iso: "2026-11-16T15:00:00.000Z", label: "Mon, Nov 16 · 9:00 AM" },
+  booked: true,
+  demo: { insuranceState: "confirmed", visitComplete: true },
+};
+
+const PAGES = [
+  "/start",
+  "/about",
+  "/conditions",
+  "/safety",
+  "/insurance",
+  "/needs",
+  "/match",
+  "/cost",
+  "/account",
+  "/payment",
+  "/confirmation",
+  "/visit/before",
+  "/visit/reminders",
+  "/visit/email",
+  "/visit/day",
+  "/visit/complete",
+];
+
+test("no page scrolls horizontally at 390x844", async ({ page }) => {
+  await setModel(page, "fail");
+  await page.goto("/start");
+  await page.evaluate((a) => sessionStorage.setItem("legion.answers", JSON.stringify(a)), FULL_PERSONA);
+
+  for (const path of PAGES) {
+    await page.goto(path);
+    await page.waitForLoadState("networkidle");
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `horizontal overflow on ${path}`).toBeLessThanOrEqual(1);
+  }
+});
