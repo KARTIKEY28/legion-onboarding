@@ -37,6 +37,11 @@ export function freeToChangeLine(slotIso: string): string {
   return `Free to change until ${cancellationCutoff(slotIso)}. After that, cancelling may cost $${cancellation.followUpFee.value}.`;
 }
 
+/** The reminder variant: "Free to reschedule until [cutoff]. After that, cancelling may cost [fee]." */
+export function freeToRescheduleLine(slotIso: string): string {
+  return `Free to reschedule until ${cancellationCutoff(slotIso)}. After that, cancelling may cost $${cancellation.followUpFee.value}.`;
+}
+
 /** The on-file card line for the confirmation; insured adds a coverage line. */
 export function cardOnFileLines(path: PaymentPath): string[] {
   const lines = [`Your card is on file. You're charged about ${cardTerms.chargeDaysAfterVisit.value} days after your visit.`];

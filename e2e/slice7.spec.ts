@@ -10,6 +10,7 @@ const SEED = {
   insurance: { path: "insured" },
   selectedClinician: { id: "c1", name: "Dr. Dana Whitfield" },
   selectedSlot: { iso: "2026-11-10T20:00:00.000Z", label: "Tue, Nov 10 · 2:00 PM" },
+  patient: { smsConsent: true },
   booked: true,
   demo: { insuranceState: "confirmed", formsComplete: false, visitComplete: false },
 };
