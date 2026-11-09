@@ -139,6 +139,8 @@ export const EVENTS = {
   "account.viewed": event("account"),
   "account.created": event("account", {
     email_prefilled: z.boolean(),
+    phone_given: z.boolean(),
+    sms_consent: z.boolean(),
   }),
 
   // Payment
