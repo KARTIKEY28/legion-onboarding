@@ -309,3 +309,12 @@ Each entry says what was decided, why, and how to undo it.
 | 203 | Account fields carry autocomplete (given-name, family-name, email, tel) and inputMode (email, tel), and each gets a one-line reason: Email "For your confirmation and sign-in link."; Phone "Optional. For text reminders before your visit." | As briefed | `src/app/account/page.tsx` |
 | 204 | **Phone is optional** and lightly formatted as the patient types ((555) 010-0142); a too-short number gets a calm "looks short … or leave it blank." error, an empty one passes. When a phone is entered, an unchecked consent box appears: "Text me visit reminders. Message and data rates may apply. Reply STOP to opt out." Text reminders are shown later only if consent was given | As briefed; SMS only with explicit opt-in | `src/app/account/page.tsx` |
 | 205 | `account.created` gains `phone_given` and `sms_consent` (booleans only, never the number); names and phone are stored under `patient` in the session and never logged. A test asserts the phone digits never appear in any event | Measurement plan; no PII | `src/analytics/schema.ts`, `e2e/slice6.spec.ts` |
+
+## Demo/honesty/polish pass — Part 5: Confirmation
+
+| # | Decision | Why | To change it |
+| --- | --- | --- | --- |
+| 206 | Confirmation has one primary action, "Get ready for your visit"; the duplicate link is gone | One primary action per screen | `src/app/confirmation/page.tsx` |
+| 207 | Under the visit card: "Need to change it? Reschedule or cancel" opens a simple simulated reschedule sheet with the clinician's next open times (picking one updates the booked slot). Above it: "Free to change until [cutoff]. After that, cancelling may cost $100." The cutoff is the visit time minus the 48-hour window, shown with weekday, date, time and CT; the fee comes from `src/facts/terms.ts` (the brief's `src/data/terms.ts`), never a literal | As briefed | `src/app/confirmation/page.tsx`, `cancellationCutoff`/`freeToChangeLine` in `src/payment/summary.ts` |
+| 208 | One payment line on Confirmation: "Your card is on file. You're charged about 5 days after your visit." Insured adds "We'll confirm your coverage before your visit." (facts-based) | As briefed | `cardOnFileLines` in `src/payment/summary.ts` |
+| 209 | Events `reschedule.opened` and `reschedule.completed` added (no times or PII) | Measurement plan | `src/analytics/schema.ts`, `e2e/slice7.spec.ts` |

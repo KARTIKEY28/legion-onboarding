@@ -35,6 +35,19 @@ test("confirmation: Central Time, add to calendar, what happens next, fires conf
   expect((await events(page)).filter((e) => e.event === "confirmation.viewed")).toHaveLength(1);
 });
 
+test("confirmation: payment line, free-to-change cutoff, and a working reschedule sheet", async ({ page }) => {
+  await open(page, "/confirmation");
+  await expect(page.getByText(/Your card is on file\. You're charged about 5 days after your visit\./)).toBeVisible();
+  await expect(page.getByText("We'll confirm your coverage before your visit.")).toBeVisible(); // SEED is insured
+  await expect(page.getByText(/Free to change until .*CT\. After that, cancelling may cost \$100\./)).toBeVisible();
+
+  const sheet = page.getByRole("region", { name: "Reschedule or cancel" });
+  await sheet.getByRole("button", { name: "Need to change it? Reschedule or cancel" }).click();
+  expect((await events(page)).filter((e) => e.event === "reschedule.opened")).toHaveLength(1);
+  await sheet.getByRole("button", { name: /AM|PM/ }).first().click();
+  expect((await events(page)).filter((e) => e.event === "reschedule.completed")).toHaveLength(1);
+});
+
 test("before: intake prefilled and confirmed, ID, records consent, insurance status, AI summary", async ({ page }) => {
   await setModel(page, "ok"); // model summary
   await open(page, "/visit/before");

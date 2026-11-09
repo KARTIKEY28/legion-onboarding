@@ -158,6 +158,9 @@ export const EVENTS = {
   // never any PII, free text or health answer, only states, counts and booleans.
   "visit.booked": event("visit"),
   "confirmation.viewed": event("visit"),
+  // Opening and completing the simulated reschedule sheet. No times or PII.
+  "reschedule.opened": event("visit"),
+  "reschedule.completed": event("visit"),
   "intake.started": event("visit"),
   "intake.completed": event("visit"),
   "id.uploaded": event("visit", { uploaded: z.boolean() }),
