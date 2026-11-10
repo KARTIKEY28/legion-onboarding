@@ -354,3 +354,11 @@ Each entry says what was decided, why, and how to undo it.
 | --- | --- | --- | --- |
 | 224 | Cost and terms: the summary card is labeled "Review your visit" and adds "Not booked yet. Nothing is charged until you book." "What you pay" now shows the pre-payment estimate (A1), and the under-48-hours / free-to-change line (A3) appears on the card when a time is selected | C1; reduce the account-creation drop by making cost and "nothing charged yet" explicit | `src/app/cost/page.tsx` |
 | 225 | Confirmation: the visit card shows the cost estimate (A1), and the reschedule terms use the A3 `changeTermsLine` (under-48-hours warning inside the window, free-to-change cutoff outside it, never a time that has already passed) | C2 | `src/app/confirmation/page.tsx` |
+
+## Funnel pass — Part D: after payment
+
+| # | Decision | Why | To change it |
+| --- | --- | --- | --- |
+| 226 | "Your story" is now built only from concerns (natural phrases from phrases.ts), the patient's own words (redacted + safety-checked), and care preferences (language, clinician gender). Insurance, payment and logistics are removed. One label only: "Drafted from your answers. You can edit or remove anything." (the duplicate badge is gone). Same model rules and template fallback | D1; it is for the clinician, about care | `src/ai/previsit.ts`, `src/aftervisit/answers.ts`, `src/app/visit/before/page.tsx` |
+| 227 | Before your visit: when coverage is confirmed, the insurance card shows the cost estimate (A1); self pay shows the self-pay estimate | D2 | `src/app/visit/before/page.tsx` |
+| 228 | Day of visit: the device check runs automatically (checking → ready, or a problem with one plain fix and Try again). "Join video visit" is enabled only from 10 minutes before (otherwise "You can join from 10 minutes before. Your visit opens at [time] CT."). A "Before you join" card lists: a private quiet place, being in Texas during the visit, and **FLAGGED FOR LEGION:** "Have a list of any medications you take" (confirm this wording and whether to ask it) | D3 | `src/app/visit/day/page.tsx` |

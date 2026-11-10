@@ -110,8 +110,12 @@ test("pre-visit email: a general and a condition-specific example, labeled illus
   await expect(tailored).toContainText("feeling down");
 });
 
-test("day of visit: joining fires visit.joined", async ({ page }) => {
-  await open(page, "/visit/day");
+test("day of visit: join is gated until the visit window, then firing visit.joined", async ({ page }) => {
+  await open(page, "/visit/day"); // clock defaults to "far"
+  await expect(page.getByText(/You can join from 10 minutes before/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Join video visit" })).toHaveCount(0);
+
+  await open(page, "/visit/day", { ...SEED, demo: { ...SEED.demo, clock: "visit" } });
   await page.getByRole("button", { name: "Join video visit" }).click();
   expect((await events(page)).filter((e) => e.event === "visit.joined")).toHaveLength(1);
 });

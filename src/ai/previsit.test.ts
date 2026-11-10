@@ -2,17 +2,17 @@ import { describe, expect, it } from "vitest";
 import { composeSummary, isAcceptableSummary, templateSummary, type PrevisitInput, type SummaryWriter } from "./previsit";
 
 const INPUT: PrevisitInput = {
-  topics: ["Low mood", "Worry"],
-  availability: ["Weekday afternoons"],
-  path: "self_pay",
+  topics: ["low mood", "ongoing worry"],
+  note: "work has been a lot lately",
 };
 
 describe("pre-visit summary", () => {
-  it("the template uses only the picked labels and the payment path", () => {
+  it("the template uses concerns and the patient's own words, not insurance or logistics", () => {
     const text = templateSummary(INPUT);
     expect(text).toContain("low mood");
-    expect(text).toContain("worry");
-    expect(text).toContain("without insurance");
+    expect(text).toContain("ongoing worry");
+    expect(text).toContain("work has been a lot lately");
+    expect(text).not.toMatch(/insurance|deductible|copay|pay/i);
     expect(text).not.toMatch(/diagnos|should|medication/i);
   });
 

@@ -52,10 +52,9 @@ test("Start to Visit complete: the full funnel reaches the primary outcome", asy
   await expect(page.getByRole("heading", { name: "Before your visit" })).toBeVisible();
   await page.getByRole("link", { name: "I'm ready for my visit" }).click();
   await expect(page).toHaveURL(/\/visit\/day$/);
-  await page.getByRole("button", { name: "Join video visit" }).click();
 
-  // The funnel up to the visit fired (captured before the reload below clears
-  // the in-session event log).
+  // The funnel up to the day-of screen fired (captured before the reload below
+  // clears the in-session event log).
   const names = (await events(page)).map((e) => e.event);
   for (const expected of [
     "onboarding.started",
@@ -64,10 +63,19 @@ test("Start to Visit complete: the full funnel reaches the primary outcome", asy
     "visit.booked",
     "confirmation.viewed",
     "intake.started",
-    "visit.joined",
   ]) {
     expect(names, `missing ${expected}`).toContain(expected);
   }
+
+  // The visit opens 10 minutes before; put the clock at visit time so Join is enabled.
+  await page.evaluate(() => {
+    const a = JSON.parse(sessionStorage.getItem("legion.answers") || "{}");
+    a.demo = { ...(a.demo ?? {}), clock: "visit" };
+    sessionStorage.setItem("legion.answers", JSON.stringify(a));
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "Join video visit" }).click();
+  expect((await events(page)).some((e) => e.event === "visit.joined")).toBe(true);
 
   // The dev control completes the visit (seeded directly, as the panel would).
   await page.evaluate(() => {

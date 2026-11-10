@@ -12,13 +12,13 @@ import { z } from "zod";
  */
 
 export const previsitInputSchema = z.object({
+  /** Concerns as natural phrases (from phrases.ts), never raw option labels. */
   topics: z.array(z.string().max(80)).max(20),
-  availability: z.array(z.string().max(40)).max(10),
+  /** Care preferences that matter for the visit. */
   language: z.string().max(40).optional(),
   genderPref: z.string().max(40).optional(),
   /** The patient's own words, already redacted and safety-checked by the caller. */
   note: z.string().max(1000).optional(),
-  path: z.enum(["insured", "self_pay", "not_sure"]),
 });
 
 export type PrevisitInput = z.infer<typeof previsitInputSchema>;
@@ -49,23 +49,20 @@ export function templateSummary(input: PrevisitInput): string {
   } else {
     parts.push("I'm still figuring out what's been on my mind, and I'd like help working it out.");
   }
-  if (input.availability.length) parts.push(`Times that work for me: ${list(input.availability)}.`);
+  if (input.note?.trim()) parts.push(`In my own words: ${input.note.trim()}`);
   if (input.language) parts.push(`I'd prefer to talk in ${input.language}.`);
   if (input.genderPref) parts.push(`I'd feel most comfortable with a ${input.genderPref} clinician.`);
-  if (input.note?.trim()) parts.push(`In my own words: ${input.note.trim()}`);
-  parts.push(input.path === "self_pay" ? "I'm paying without insurance." : "I'm planning to use my insurance.");
+  // No insurance, payment or logistics here: this is for the clinician, about care.
   return parts.join(" ");
 }
 
 /** Facts block for the model: labels only, never free text. */
 export function summaryFacts(input: PrevisitInput): string {
   return [
-    `Topics they picked: ${input.topics.join("; ") || "none yet"}`,
-    `Times that suit them: ${input.availability.join("; ") || "any"}`,
+    `Concerns (natural phrases): ${input.topics.join("; ") || "none yet"}`,
     `Preferred language: ${input.language || "no preference"}`,
     `Preferred clinician gender: ${input.genderPref || "no preference"}`,
     `In their own words (already redacted): ${input.note?.trim() || "nothing added"}`,
-    `Payment: ${input.path === "self_pay" ? "without insurance" : "using insurance"}`,
   ].join("\n");
 }
 
