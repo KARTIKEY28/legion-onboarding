@@ -7,6 +7,7 @@ import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { ExclusionNote, RadioQuestion } from "@/components/form";
 import { CheckOption } from "@/components/safety";
 import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, barPrimary } from "@/components/ui";
+import { resultFromInsurance } from "@/data/estimate";
 import { samplePayers } from "@/facts";
 import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
 
@@ -16,6 +17,22 @@ const OTHER = "other";
 
 const inputClass = (error?: string) =>
   `min-h-12 rounded-md border bg-surface px-3 text-base ${error ? "border-danger" : "border-line"}`;
+
+/** The calm ~2 second "checking your coverage" state after an insured submit. */
+function CheckingCoverage() {
+  return (
+    <Screen>
+      <Progress step="insurance" />
+      <div role="status" aria-live="polite" className="flex flex-col items-center gap-4 rounded-lg bg-surface p-8 text-center">
+        <span aria-hidden className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-accent" />
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-semibold">Checking your coverage</h1>
+          <p className="text-ink-muted">This takes a moment. We&apos;re estimating your cost before you book.</p>
+        </div>
+      </div>
+    </Screen>
+  );
+}
 
 export default function InsurancePage() {
   const answers = useAnswers();
@@ -36,6 +53,7 @@ function InsuranceForm({ answers }: { answers: SessionAnswers }) {
   const [groupId, setGroupId] = useState(saved?.groupId ?? "");
   const [addLater, setAddLater] = useState(saved?.addLater ?? false);
   const [submitted, setSubmitted] = useState(false);
+  const [checking, setChecking] = useState(false);
   const summaryRef = useRef<HTMLDivElement>(null);
 
   function chooseCoverage(value: CoverageAnswer) {
@@ -76,25 +94,44 @@ function InsuranceForm({ answers }: { answers: SessionAnswers }) {
       router.push("/next-steps");
       return;
     }
+    const insurance: SessionAnswers["insurance"] =
+      path === "insured"
+        ? {
+            path,
+            addLater,
+            payerId: addLater ? undefined : payerId,
+            payerOther: addLater || payerId !== OTHER ? undefined : payerOther.trim(),
+            memberId: addLater ? undefined : memberId.trim(),
+            groupId: addLater ? undefined : groupId.trim() || undefined,
+          }
+        : { path: path! };
     updateAnswers({
       coverageAtInsurance: coverage,
       // Still not sure: keep the reminder so coverage is confirmed at verification.
       confirmCoverageAtInsurance: askCoverage ? coverage !== "no" : answers.confirmCoverageAtInsurance,
-      insurance:
-        path === "insured"
-          ? {
-              path,
-              addLater,
-              payerId: addLater ? undefined : payerId,
-              payerOther: addLater || payerId !== OTHER ? undefined : payerOther.trim(),
-              memberId: addLater ? undefined : memberId.trim(),
-              groupId: addLater ? undefined : groupId.trim() || undefined,
-            }
-          : { path: path! },
+      insurance,
     });
     getTracker()("insurance.submitted", { path: path! });
+
+    if (path === "insured") {
+      // Run the simulated eligibility check (results come only from plans.ts).
+      const estimate = resultFromInsurance({ insurance });
+      setChecking(true);
+      window.setTimeout(() => {
+        updateAnswers({ eligibilityCost: estimate });
+        if (estimate.result !== "self_pay") {
+          getTracker()("eligibility.checked_cost", { result: estimate.result });
+        }
+        router.push("/needs");
+      }, 2000);
+      return;
+    }
+
+    updateAnswers({ eligibilityCost: { result: "self_pay" } });
     router.push("/needs");
   }
+
+  if (checking) return <CheckingCoverage />;
 
   return (
     <Screen>

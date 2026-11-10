@@ -1,3 +1,4 @@
+import { estimateLine, type CostEstimate } from "@/data/estimate";
 import { freeToRescheduleLine } from "@/payment/summary";
 import { formatCentral } from "@/time";
 
@@ -14,6 +15,8 @@ export interface VisitContext {
   insuranceState: "checking" | "confirmed" | "more_info";
   /** Whether the patient opted in to SMS reminders (controls the text variant). */
   smsConsent: boolean;
+  /** The cost estimate from the Insurance check (A1), shown in the email body. */
+  estimate: CostEstimate;
 }
 
 /** The clinician's first name, without a title like "Dr." */
@@ -74,9 +77,14 @@ export function reminderCards(ctx: VisitContext): ReminderCard[] {
   const rescheduleLink = "Reschedule or cancel: [open your visit]";
 
   const card = (lead: string, leadLine: string): ReminderCard => {
-    const body = [leadLine, `Your video visit is ${when}.`, formsLine(ctx), insuranceLine(ctx), rescheduleLink].filter(
-      (line): line is string => Boolean(line),
-    );
+    const body = [
+      leadLine,
+      `Your video visit is ${when}.`,
+      estimateLine(ctx.estimate),
+      formsLine(ctx),
+      insuranceLine(ctx),
+      rescheduleLink,
+    ].filter((line): line is string => Boolean(line));
     // One short SMS, kept well under 160 characters.
     const sms = `Legion: your visit with ${clinicianFirst(ctx.clinicianName)} is ${lead} away, ${when}. Reschedule: [link]`;
     return { lead, email: { subject: `Your visit with ${ctx.clinicianName} is ${lead} away`, body }, sms };

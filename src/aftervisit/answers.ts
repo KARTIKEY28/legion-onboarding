@@ -1,5 +1,6 @@
 import type { PrevisitInput } from "@/ai/previsit";
 import { removeIdentifiers } from "@/ai/redact";
+import { estimateFromAnswers } from "@/data/estimate";
 import { localSafetyCheck } from "@/safety/local";
 import { AVAILABILITY_WINDOWS, CLINICIAN_GENDERS, LANGUAGES } from "@/clinicians/model";
 import { conditionTopics } from "@/facts";
@@ -57,5 +58,6 @@ export function visitContext(a: SessionAnswers, demo: typeof DEMO_DEFAULTS): Vis
     path: a.insurance?.path ?? "not_sure",
     insuranceState: demo.insuranceState,
     smsConsent: Boolean(a.patient?.smsConsent),
+    estimate: estimateFromAnswers(a),
   };
 }

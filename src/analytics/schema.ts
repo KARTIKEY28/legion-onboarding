@@ -130,6 +130,10 @@ export const EVENTS = {
   "cost_summary.validation_failed": event("cost", {
     reason: z.enum(["number_not_allowed", "missing_fact", "ceiling_language", "format"]),
   }),
+  // The simulated eligibility/cost check on Insurance. Result type only, never amounts.
+  "eligibility.checked_cost": event("insurance", {
+    result: z.enum(["copay", "deductible", "not_covered", "failed"]),
+  }),
   "reservation.requested": event("cost"),
   "reservation.failed": event("cost", {
     reason: z.enum(["slot_taken", "technical", "unknown"]),
