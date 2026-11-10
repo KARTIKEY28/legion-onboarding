@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { previsitInput, availabilityLabels, topicLabels } from "@/aftervisit/answers";
 import { AfterVisitAction, AfterVisitScreen, useDemo } from "@/components/aftervisit";
+import { estimateFromAnswers, estimateLine } from "@/data/estimate";
 import { LoadingScreen } from "@/components/ui";
 import { flags } from "@/flags";
 import { useAnswers, type SessionAnswers } from "@/session/store";
@@ -22,7 +23,7 @@ export default function BeforeVisitPage() {
       <IntakeForms answers={answers} />
       {flags.previsitSummary && <StorySummary answers={answers} />}
       <PhotoId />
-      <InsuranceStatus path={answers.insurance?.path ?? "not_sure"} />
+      <InsuranceStatus path={answers.insurance?.path ?? "not_sure"} estimate={estimateLine(estimateFromAnswers(answers))} />
       <OutsideRecords />
       <VideoLink />
       <AfterVisitAction href="/visit/day">I&apos;m ready for my visit</AfterVisitAction>
@@ -120,8 +121,8 @@ function StorySummary({ answers }: { answers: SessionAnswers }) {
   }
 
   return (
-    <Card title="Your story, ready for your clinician" tag="Drafted from your answers">
-      <p className="text-ink-muted">Drafted from your answers. You can edit or remove anything. Only shared if you choose to.</p>
+    <Card title="Your story, ready for your clinician">
+      <p className="text-ink-muted">Drafted from your answers. You can edit or remove anything.</p>
       {summary ? (
         <>
           <textarea
@@ -188,7 +189,7 @@ const INSURANCE_COPY = {
   more_info: { title: "We need a little more information", body: "We couldn't verify your coverage yet. Our team will follow up.", can: "You can reply to our email with your plan details, or switch to paying without insurance." },
 } as const;
 
-function InsuranceStatus({ path }: { path: "insured" | "self_pay" | "not_sure" }) {
+function InsuranceStatus({ path, estimate }: { path: "insured" | "self_pay" | "not_sure"; estimate: string }) {
   const demo = useDemo();
   const state = path === "self_pay" ? "self_pay" : demo.insuranceState;
   useTrackOnce(`insurance.status_viewed:${state}`, "insurance.status_viewed", () => ({ state }));
@@ -197,6 +198,7 @@ function InsuranceStatus({ path }: { path: "insured" | "self_pay" | "not_sure" }
     return (
       <Card title="Paying without insurance">
         <p className="text-ink-muted">You chose to pay without insurance, so there&apos;s no coverage to check.</p>
+        <p className="text-base">{estimate}</p>
       </Card>
     );
   }
@@ -205,7 +207,8 @@ function InsuranceStatus({ path }: { path: "insured" | "self_pay" | "not_sure" }
     <Card title="Insurance">
       <p data-testid="insurance-state" data-state={state} className="text-lg font-medium">{copy.title}</p>
       <p className="text-ink-muted">{copy.body}</p>
-      <p className="text-sm text-ink-muted">{copy.can}</p>
+      {/* When coverage is verified, show the cost estimate (A1 / D2). */}
+      {state === "confirmed" ? <p className="text-base">{estimate}</p> : <p className="text-sm text-ink-muted">{copy.can}</p>}
     </Card>
   );
 }

@@ -1,6 +1,7 @@
 import type { PrevisitInput } from "@/ai/previsit";
 import { removeIdentifiers } from "@/ai/redact";
 import { estimateFromAnswers } from "@/data/estimate";
+import { concernPhrase } from "@/data/phrases";
 import { localSafetyCheck } from "@/safety/local";
 import { AVAILABILITY_WINDOWS, CLINICIAN_GENDERS, LANGUAGES } from "@/clinicians/model";
 import { conditionTopics } from "@/facts";
@@ -39,12 +40,11 @@ function safeNote(a: SessionAnswers): string | undefined {
 
 export function previsitInput(a: SessionAnswers): PrevisitInput {
   return {
-    topics: topicLabels(a),
-    availability: availabilityLabels(a),
+    // Concerns as natural phrases, never raw option labels.
+    topics: (a.conditions?.topics ?? []).map((id) => concernPhrase[id] ?? id),
     language: languageLabel(a),
     genderPref: genderLabel(a),
     note: safeNote(a),
-    path: a.insurance?.path ?? "not_sure",
   };
 }
 

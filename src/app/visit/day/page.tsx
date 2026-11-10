@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { trackOnce } from "@/analytics/hooks";
 import { visitContext } from "@/aftervisit/answers";
 import { AfterVisitScreen, useDemo } from "@/components/aftervisit";
@@ -15,6 +15,8 @@ export default function DayOfVisitPage() {
   const demo = useDemo();
   if (!answers) return <LoadingScreen />;
   const ctx = visitContext(answers, demo);
+  const canJoin = demo.clock === "visit"; // enabled only from 10 minutes before the visit
+  const slotIso = answers.selectedSlot?.iso;
   return (
     <AfterVisitScreen stepId="day">
       <div className="flex flex-col gap-2">
@@ -24,46 +26,87 @@ export default function DayOfVisitPage() {
         </p>
       </div>
       <DeviceCheck problem={demo.deviceProblem} />
-      <JoinVisit />
+      <BeforeYouJoin />
+      <JoinVisit canJoin={canJoin} slotIso={slotIso} />
     </AfterVisitScreen>
   );
 }
 
+type CheckState = "checking" | "ok" | "problem";
+
 function DeviceCheck({ problem }: { problem: boolean }) {
-  const [ran, setRan] = useState(false);
-  // The problem state is driven by the demo bar's "Device" toggle, not a patient control.
-  const failed = ran && problem;
+  const [state, setState] = useState<CheckState>("checking");
+
+  // The check runs automatically (as if after the browser permission prompt).
+  useEffect(() => {
+    setState("checking");
+    const t = setTimeout(() => setState(problem ? "problem" : "ok"), 900);
+    return () => clearTimeout(t);
+  }, [problem]);
+
   return (
     <section aria-label="Device check" className="flex flex-col gap-3 rounded-lg bg-surface p-4">
-      <h2 className="text-lg font-semibold">Quick device check</h2>
+      <h2 className="text-lg font-semibold">Device check</h2>
       <ul className="flex flex-col gap-2">
         {CHECKS.map((c) => (
           <li key={c} className="flex items-center justify-between">
             <span>{c}</span>
-            <span className={ran && !failed ? "text-accent" : "text-ink-muted"}>
-              {ran ? (failed ? "Needs attention" : "Ready") : "Not checked"}
+            <span className={state === "ok" ? "text-accent" : "text-ink-muted"} data-testid={`check-${c.toLowerCase()}`}>
+              {state === "checking" ? "Checking…" : state === "ok" ? "Ready" : "Needs attention"}
             </span>
           </li>
         ))}
       </ul>
-      <button
-        type="button"
-        onClick={() => setRan(true)}
-        className="self-start rounded-md border border-accent px-4 py-2 text-base font-medium text-accent"
-      >
-        Run check
-      </button>
-      {failed && (
-        <p role="status" className="rounded-md bg-danger-soft px-4 py-2 text-sm">
-          Something isn&apos;t working? You can still join. Our team can help, or you can switch to a phone call. We won&apos;t let a
-          device problem stop your visit.
-        </p>
+      {state === "problem" && (
+        <div role="status" className="flex flex-col gap-2 rounded-md bg-danger-soft px-4 py-3 text-sm">
+          <p>
+            Your camera or microphone looks blocked. In your browser&apos;s address bar, allow camera and microphone for
+            this site, then try again.
+          </p>
+          <button
+            type="button"
+            onClick={() => setState("checking")}
+            className="self-start rounded-md border border-accent px-4 py-2 text-base font-medium text-accent"
+          >
+            Try again
+          </button>
+          <p className="text-ink-muted">You can still join. Our team can help, or you can switch to a phone call.</p>
+        </div>
       )}
     </section>
   );
 }
 
-function JoinVisit() {
+function BeforeYouJoin() {
+  return (
+    <section aria-label="Before you join" className="flex flex-col gap-3 rounded-lg bg-surface p-4">
+      <h2 className="text-lg font-semibold">Before you join</h2>
+      <ul className="flex flex-col gap-2">
+        <li className="flex gap-2">
+          <span aria-hidden className="text-accent">
+            ·
+          </span>
+          <span>Find a private, quiet place where you can speak freely.</span>
+        </li>
+        <li className="flex gap-2">
+          <span aria-hidden className="text-accent">
+            ·
+          </span>
+          <span>You need to be in Texas during your visit.</span>
+        </li>
+        <li className="flex gap-2">
+          <span aria-hidden className="text-accent">
+            ·
+          </span>
+          {/* Medications wording flagged for Legion in docs/DECISIONS.md. */}
+          <span>Have a list of any medications you take, so your clinician has the full picture.</span>
+        </li>
+      </ul>
+    </section>
+  );
+}
+
+function JoinVisit({ canJoin, slotIso }: { canJoin: boolean; slotIso?: string }) {
   const [joined, setJoined] = useState(false);
   function join() {
     setJoined(true);
@@ -74,7 +117,7 @@ function JoinVisit() {
       <h2 className="text-lg font-semibold">Ready when you are</h2>
       {joined ? (
         <p role="status" className="rounded-md bg-canvas px-4 py-3">You&apos;ve joined. Your clinician will be with you shortly.</p>
-      ) : (
+      ) : canJoin ? (
         <button
           type="button"
           onClick={join}
@@ -82,6 +125,10 @@ function JoinVisit() {
         >
           Join video visit
         </button>
+      ) : (
+        <p className="text-ink-muted">
+          You can join from 10 minutes before. Your visit opens at {slotIso ? formatCentral(slotIso) : "your visit time"}.
+        </p>
       )}
     </section>
   );
