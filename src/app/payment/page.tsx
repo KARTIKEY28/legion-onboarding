@@ -7,7 +7,7 @@ import { getTracker } from "@/analytics/client";
 import { CLINICIANS } from "@/clinicians/data";
 import { nextSlots, type Slot } from "@/clinicians/schedule";
 import { Portrait } from "@/components/Portrait";
-import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, TextLink, barPrimary } from "@/components/ui";
+import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, TextLink, barPrimary, secondaryClass } from "@/components/ui";
 import { scenarioForCard, TEST_CARDS, maskCard } from "@/payment/cards";
 import type { BookingResult, PaymentScenario } from "@/payment/booking";
 import { bookingCostLine, cancellationLine, cardHoldLine, type PaymentPath } from "@/payment/summary";
@@ -141,7 +141,7 @@ function PaymentScreen({ path }: { path: PaymentPath }) {
       <section aria-label="Booking summary" className="flex items-start gap-3 rounded-lg bg-accent-soft p-4">
         <Portrait id={clinician.id} name={clinician.name} size={48} />
         <div className="flex flex-col gap-1">
-        <p className="text-sm text-ink-muted">Your first visit</p>
+        <p className="text-sm text-ink-muted">Video visit</p>
         <p className="text-lg font-semibold">{clinician.name}</p>
         <p data-testid="booking-when" className="text-base">
           {formatCentral(slot.iso)}
@@ -187,7 +187,7 @@ function PaymentScreen({ path }: { path: PaymentPath }) {
               <button
                 type="button"
                 onClick={() => void book(true)}
-                className="rounded-md border border-accent px-4 py-2 text-base font-medium text-accent"
+                className={secondaryClass}
               >
                 Confirm with your bank
               </button>

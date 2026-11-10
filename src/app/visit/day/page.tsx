@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { trackOnce } from "@/analytics/hooks";
 import { visitContext } from "@/aftervisit/answers";
 import { AfterVisitScreen, useDemo } from "@/components/aftervisit";
-import { LoadingScreen } from "@/components/ui";
+import { LoadingScreen, secondaryClass } from "@/components/ui";
 import { useAnswers } from "@/session/store";
 import { formatCentral } from "@/time";
 
@@ -66,7 +66,7 @@ function DeviceCheck({ problem }: { problem: boolean }) {
           <button
             type="button"
             onClick={() => setState("checking")}
-            className="self-start rounded-md border border-accent px-4 py-2 text-base font-medium text-accent"
+            className={`${secondaryClass} self-start`}
           >
             Try again
           </button>
