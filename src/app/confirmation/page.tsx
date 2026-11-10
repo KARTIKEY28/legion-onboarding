@@ -9,7 +9,8 @@ import { LoadingScreen } from "@/components/ui";
 import { buildIcs } from "@/aftervisit/content";
 import { CLINICIANS } from "@/clinicians/data";
 import { nextSlots, type Slot } from "@/clinicians/schedule";
-import { cardOnFileLines, freeToChangeLine } from "@/payment/summary";
+import { cardOnFileLines, changeTermsLine } from "@/payment/summary";
+import { estimateFromAnswers, estimateLine } from "@/data/estimate";
 import { updateAnswers, useAnswers } from "@/session/store";
 import { formatCentral } from "@/time";
 
@@ -32,6 +33,7 @@ export default function ConfirmationPage() {
         clinicianName={clinician?.name}
         slotIso={slot?.iso}
         path={answers.insurance?.path ?? "not_sure"}
+        estimate={estimateLine(estimateFromAnswers(answers))}
         returning={answers.returningPatient}
       />
     </AfterVisitScreen>
@@ -43,12 +45,14 @@ function Confirmed({
   clinicianName,
   slotIso,
   path,
+  estimate,
   returning,
 }: {
   clinicianId?: string;
   clinicianName?: string;
   slotIso?: string;
   path: "insured" | "self_pay" | "not_sure";
+  estimate: string;
   returning?: boolean;
 }) {
   useTrackOnce("confirmation.viewed", "confirmation.viewed");
@@ -78,6 +82,9 @@ function Confirmed({
           <p className="text-lg font-semibold">{clinicianName ?? "Your clinician"}</p>
           <p data-testid="confirmation-when" className="text-base">
             {slotIso ? formatCentral(slotIso) : "Time to be confirmed"}
+          </p>
+          <p data-testid="confirmation-cost" className="text-sm text-ink-muted">
+            {estimate}
           </p>
           <button
             type="button"
@@ -141,7 +148,7 @@ function Reschedule({ clinicianId, clinicianName, slotIso }: { clinicianId: stri
 
   return (
     <section aria-label="Reschedule or cancel" className="flex flex-col gap-2 rounded-lg border border-line p-4">
-      <p className="text-sm text-ink-muted">{freeToChangeLine(slotIso)}</p>
+      <p className="text-sm text-ink-muted">{changeTermsLine(slotIso)}</p>
       {!open ? (
         <button type="button" onClick={openSheet} className="self-start text-accent underline underline-offset-2">
           Need to change it? Reschedule or cancel
