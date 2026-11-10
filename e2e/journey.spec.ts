@@ -26,6 +26,7 @@ test("Start to Visit complete: the full funnel reaches the primary outcome", asy
   // Match → Cost → Account
   await expect(page).toHaveURL(/\/match$/);
   await page.getByRole("article").first().getByRole("button", { name: /AM|PM/ }).first().click();
+  await page.getByRole("button", { name: "Continue" }).click(); // confirm in the sticky bar
   await expect(page.getByText("Step 8 of 10 · Cost and terms")).toBeVisible();
   await page.getByRole("link", { name: "Continue to create your account" }).click();
 

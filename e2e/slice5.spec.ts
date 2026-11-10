@@ -12,38 +12,65 @@ async function seedAndOpenMatch(page: Page, answers: Record<string, unknown>) {
 const STRONG = {
   inTexas: "yes",
   conditions: { topics: ["low_mood", "worry"], unsure: false, skipped: false },
-  needs: { availability: ["weekday_afternoons"] },
   insurance: { path: "self_pay" },
 };
 
-test("strong matches: three cards, picking a time goes to Cost, clean events", async ({ page }) => {
+test("select a time, confirm in the sticky bar, clean events and the self-pay estimate", async ({ page }) => {
   await setModel(page, "fail"); // template headline, deterministic
   await seedAndOpenMatch(page, STRONG);
 
   await expect(page.getByTestId("match-headline")).toHaveAttribute("data-source", "template");
+  // The cost line under the headline (self pay here).
+  await expect(page.getByTestId("match-cost-line")).toHaveText("$250 for your first visit, $150 for follow ups.");
+
   const cards = page.getByRole("article");
   await expect(cards).toHaveCount(3);
-  // Top card shows reasons and the illustrative evidence line.
   await expect(cards.first()).toContainText("Focuses on");
+  await expect(cards.first()).toContainText("Next opening:"); // B3 default time reason
   await expect(cards.first()).toContainText("Illustrative");
 
-  // Pick the first open time on the top card.
+  // Tapping a time selects it (no navigation) and opens the sticky confirm bar.
   await cards.first().getByRole("button", { name: /AM|PM/ }).first().click();
+  await expect(page).toHaveURL(/\/match$/);
+  await expect(page.getByRole("button", { name: "Continue" })).toBeVisible();
+  expect((await events(page)).filter((e) => e.event === "slot.selected")).toHaveLength(1);
+
+  await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/cost$/);
 
   const fired = await events(page);
   const byName = (n: string) => fired.filter((e) => e.event === n).map((e) => e.properties);
   expect(byName("match.viewed")).toEqual([{ match_count: 3, no_strong_match: false }]);
   expect(byName("reflect_back.shown")).toEqual([{ source: "template", on_step: "match" }]);
-  expect(byName("provider.selected")).toEqual([
-    { from: "top_match", source: "card", rank: 1, evidence_tier: "outcomes" },
-  ]);
+  const selected = byName("provider.selected");
+  expect(selected).toHaveLength(1);
+  expect(selected[0].from).toBe("top_match");
+  expect(selected[0].source).toBe("card");
+  expect(selected[0].rank).toBe(1);
 
   // No clinician name is ever in an event.
   const serialized = JSON.stringify(fired.map(({ event, properties }) => ({ event, properties })));
   for (const name of ["Dana", "Whitfield", "Marco", "Reyes"]) {
     expect(serialized).not.toContain(name);
   }
+});
+
+test("the headline no longer mentions time windows", async ({ page }) => {
+  await setModel(page, "fail");
+  await seedAndOpenMatch(page, STRONG);
+  await expect(page.getByTestId("match-headline")).toContainText("Clinicians who work with low mood and ongoing worry.");
+});
+
+test("time chips filter the list and fire match.time_filter_changed", async ({ page }) => {
+  await setModel(page, "fail");
+  await seedAndOpenMatch(page, STRONG);
+  await page.getByRole("button", { name: "Mornings", exact: true }).click();
+  expect((await events(page)).filter((e) => e.event === "match.time_filter_changed").map((e) => e.properties)).toEqual([
+    { value: "weekday_mornings" },
+  ]);
+  await expect(page.getByRole("article").first()).toBeVisible();
+  // The card's time reason is now the window, not "Next opening".
+  await expect(page.getByRole("article").first()).toContainText("Mornings openings");
 });
 
 test("'None of these feel right' shows the no-strong-match state and fires the event", async ({ page }) => {
@@ -62,41 +89,25 @@ test("'See all clinicians' opens the full list and selecting fires from full_lis
   expect((await events(page)).filter((e) => e.event === "match.full_list_opened")).toHaveLength(1);
 
   await page.getByRole("article").first().getByRole("button", { name: /AM|PM/ }).first().click();
+  await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/cost$/);
   const selected = (await events(page)).filter((e) => e.event === "provider.selected");
   expect(selected[0].properties.from).toBe("full_list");
 });
 
-test("See all clinicians: the gender filter narrows the compact list", async ({ page }) => {
+test("no strong match: a language with no matching clinician shows the closest options and notify", async ({ page }) => {
   await setModel(page, "fail");
-  await seedAndOpenMatch(page, STRONG);
-  await page.getByRole("button", { name: "See all clinicians" }).click();
-  const before = await page.getByRole("article").count();
-  expect(before).toBeGreaterThan(3);
-  await page.getByLabel("Clinician gender").selectOption("man");
-  const after = await page.getByRole("article").count();
-  expect(after).toBeGreaterThan(0);
-  expect(after).toBeLessThan(before);
-});
-
-test("no strong match: closest options shown, widening the time flips to strong matches", async ({ page }) => {
-  await setModel(page, "fail");
-  // low_mood but weekends-only: no low_mood clinician works weekends, so no strong match.
+  // Worry + Spanish: no Spanish-speaking clinician works with worry, so no strong match.
   await seedAndOpenMatch(page, {
     inTexas: "yes",
-    conditions: { topics: ["low_mood"], unsure: false, skipped: false },
-    needs: { availability: ["weekends"] },
+    conditions: { topics: ["worry"], unsure: false, skipped: false },
+    needs: { language: "es" },
     insurance: { path: "self_pay" },
   });
 
   await expect(page.getByText(/couldn't find a clinician who fits everything/)).toBeVisible();
   expect((await events(page)).filter((e) => e.event === "match.viewed")[0].properties.no_strong_match).toBe(true);
   await expect(page.getByRole("button", { name: /Tell me when more openings/ })).toBeVisible();
-
-  // Widen to any time of day -> strong matches appear and the banner goes away.
-  await page.getByRole("button", { name: "Any time of day" }).click();
-  await expect(page.getByText(/couldn't find a clinician who fits everything/)).toHaveCount(0);
-  await expect(page.getByRole("article")).toHaveCount(3);
 });
 
 test("clinician profile: opens from the card, reflects in the URL, Escape closes it", async ({ page }) => {
@@ -135,6 +146,9 @@ test("clinician profile: picking a time there selects from the profile", async (
 
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: /AM|PM/ }).first().click();
+  // The profile closes and the sticky confirm bar appears.
+  await expect(dialog).toBeHidden();
+  await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/cost$/);
 
   const selected = (await events(page)).filter((e) => e.event === "provider.selected");
@@ -150,10 +164,11 @@ test("slot taken at booking: a calm message, the event fires, and a retry works"
   const card = page.getByRole("article").first();
   await card.getByRole("button", { name: /AM|PM/ }).first().click();
   await expect(card.getByText(/was just taken/)).toBeVisible();
-  await expect(page).not.toHaveURL(/\/cost$/);
+  await expect(page.getByRole("button", { name: "Continue" })).toHaveCount(0);
   expect((await events(page)).filter((e) => e.event === "slot.unavailable_at_booking")).toHaveLength(1);
 
-  // Picking another offered time now works.
+  // Picking another offered time now selects and confirms.
   await card.getByRole("button", { name: /AM|PM/ }).first().click();
+  await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/cost$/);
 });

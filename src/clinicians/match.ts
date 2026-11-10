@@ -231,9 +231,11 @@ export function matchInputFromAnswers(a: {
   // "add later" cannot be verified against the roster, so they filter nobody.
   const payerId = a.insurance?.path === "insured" ? a.insurance.payerId : undefined;
   const knownPayer = payerId && samplePayers.value.some((p) => p.id === payerId) ? payerId : undefined;
+  // Time of day is no longer a hard constraint at match time (it moved to a chip
+  // filter on the Match page), so windows are always empty here.
   return {
     topics: a.conditions?.topics ?? [],
-    windows: a.needs?.availability ?? [],
+    windows: [],
     language: a.needs?.language,
     gender: a.needs?.gender,
     payerId: knownPayer,
