@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { maskedFromFields } from "@/components/form";
 import { Portrait } from "@/components/Portrait";
-import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, TextLink, barPrimary } from "@/components/ui";
+import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, TextLink, barPrimary, secondaryClass } from "@/components/ui";
 import { formatCentral } from "@/time";
 import { getAnswers, updateAnswers, useAnswers } from "@/session/store";
 
@@ -136,7 +136,7 @@ function AccountForm() {
         <section aria-label="Your chosen visit" className="flex items-start gap-3 rounded-lg bg-accent-soft p-4">
           <Portrait id={saved.selectedClinician.id} name={saved.selectedClinician.name} size={48} />
           <div className="flex flex-col gap-1">
-            <p className="text-sm text-ink-muted">Your first visit</p>
+            <p className="text-sm text-ink-muted">Video visit</p>
             <p className="text-lg font-semibold">{saved.selectedClinician.name}</p>
             {saved.selectedSlot && <p className="text-base">{formatCentral(saved.selectedSlot.iso)}</p>}
           </div>
@@ -223,7 +223,7 @@ function AccountForm() {
                 <button
                   type="button"
                   onClick={() => setLinkSent(true)}
-                  className="self-start rounded-md border border-accent px-4 py-2 text-base font-medium text-accent"
+                  className={`${secondaryClass} self-start`}
                 >
                   Send me a sign-in link
                 </button>

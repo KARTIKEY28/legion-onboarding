@@ -5,6 +5,10 @@ import { JOURNEY, stepNumber, type JourneyStepId } from "@/journey";
 const primary =
   "inline-flex min-h-12 items-center justify-center rounded-md bg-accent px-6 py-3 text-base font-medium text-accent-ink disabled:opacity-60";
 
+/** A secondary action: an outlined accent button (lower emphasis than the primary). */
+export const secondaryClass =
+  "inline-flex min-h-11 items-center justify-center rounded-md border border-accent px-4 py-2 text-base font-medium text-accent disabled:opacity-60";
+
 /** The one primary action on a screen. */
 export function PrimaryButton({ className = "", ...props }: ComponentProps<"button">) {
   return <button className={`${primary} ${className}`} {...props} />;
@@ -82,8 +86,3 @@ export function LoadingScreen() {
   );
 }
 
-/** Development-only label; never shown to a patient. Set NEXT_PUBLIC_SHOW_DEV_LABEL=1. */
-export function DevLabel() {
-  if (process.env.NEXT_PUBLIC_SHOW_DEV_LABEL !== "1") return null;
-  return <p className="px-4 py-1 text-center text-sm text-ink-muted">Prototype. Internal preview</p>;
-}

@@ -5,7 +5,7 @@ import { getTracker } from "@/analytics/client";
 import { useTrackOnce } from "@/analytics/hooks";
 import { AfterVisitAction, AfterVisitScreen } from "@/components/aftervisit";
 import { Portrait } from "@/components/Portrait";
-import { LoadingScreen } from "@/components/ui";
+import { LoadingScreen, secondaryClass } from "@/components/ui";
 import { buildIcs } from "@/aftervisit/content";
 import { CLINICIANS } from "@/clinicians/data";
 import { nextSlots, type Slot } from "@/clinicians/schedule";
@@ -89,7 +89,7 @@ function Confirmed({
           <button
             type="button"
             onClick={addToCalendar}
-            className="mt-2 self-start rounded-md border border-accent px-4 py-2 text-base font-medium text-accent"
+            className={`${secondaryClass} mt-2 self-start`}
           >
             Add to calendar
           </button>

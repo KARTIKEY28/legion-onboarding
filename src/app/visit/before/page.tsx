@@ -5,7 +5,7 @@ import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { previsitInput, availabilityLabels, topicLabels } from "@/aftervisit/answers";
 import { AfterVisitAction, AfterVisitScreen, useDemo } from "@/components/aftervisit";
 import { estimateFromAnswers, estimateLine } from "@/data/estimate";
-import { LoadingScreen } from "@/components/ui";
+import { LoadingScreen, secondaryClass } from "@/components/ui";
 import { flags } from "@/flags";
 import { useAnswers, type SessionAnswers } from "@/session/store";
 import type { PrevisitSummary } from "@/ai/previsit";
@@ -68,7 +68,7 @@ function IntakeForms({ answers }: { answers: SessionAnswers }) {
       {done ? (
         <p role="status" className="rounded-md bg-accent-soft px-4 py-2">Thanks. Your details are confirmed.</p>
       ) : (
-        <button type="button" onClick={confirm} className="self-start rounded-md border border-accent px-4 py-2 text-base font-medium text-accent">
+        <button type="button" onClick={confirm} className={`${secondaryClass} self-start`}>
           Confirm my details
         </button>
       )}
@@ -171,7 +171,7 @@ function PhotoId() {
         <p role="status" className="rounded-md bg-surface px-4 py-2 text-ink-muted">No problem. You can add it later.</p>
       ) : (
         <div className="flex flex-wrap gap-3">
-          <button type="button" onClick={upload} className="rounded-md border border-accent px-4 py-2 text-base font-medium text-accent">
+          <button type="button" onClick={upload} className={secondaryClass}>
             Use the synthetic sample
           </button>
           <button type="button" onClick={skip} className="rounded-md border border-line px-4 py-2 text-base">
@@ -231,7 +231,7 @@ function OutsideRecords() {
         </p>
       ) : (
         <div className="flex flex-wrap gap-3">
-          <button type="button" onClick={() => decide(true)} className="rounded-md border border-accent px-4 py-2 text-base font-medium text-accent">
+          <button type="button" onClick={() => decide(true)} className={secondaryClass}>
             Allow record requests
           </button>
           <button type="button" onClick={() => decide(false)} className="rounded-md border border-line px-4 py-2 text-base">
