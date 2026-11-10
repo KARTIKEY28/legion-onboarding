@@ -24,9 +24,10 @@ test("cost: the chosen clinician and time lead, Change links back to Match, Cont
   await page.goto("/cost");
 
   await expect(page.getByText("Step 8 of 10 · Cost and terms")).toBeVisible();
-  const visit = page.getByRole("region", { name: "Your chosen visit" });
+  const visit = page.getByRole("region", { name: "Review your visit" });
   await expect(visit).toContainText("Dr. Dana Whitfield");
   await expect(visit).toContainText("2:00 PM CT");
+  await expect(visit).toContainText("Not booked yet. Nothing is charged until you book.");
   await visit.getByRole("link", { name: "Change" }).click();
   await expect(page).toHaveURL(/\/match$/);
 

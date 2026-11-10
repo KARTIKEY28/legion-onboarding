@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { trackOnce, useTrackOnce } from "@/analytics/hooks";
-import { personalizedPay, templateCost, type CostPath, type CostSummary } from "@/ai/cost";
+import { templateCost, type CostPath, type CostSummary } from "@/ai/cost";
 import { reasonsTemplate } from "@/ai/matchReasons";
 import { CLINICIANS } from "@/clinicians/data";
 import { facts, matchInputFromAnswers } from "@/clinicians/match";
 import { roleLabel } from "@/clinicians/roles";
 import { ActionBar, LoadingScreen, PrimaryLink, Progress, Screen, TextLink, barPrimary } from "@/components/ui";
 import { Portrait } from "@/components/Portrait";
-import { samplePayers } from "@/facts";
+import { estimateFromAnswers, estimateLine } from "@/data/estimate";
+import { changeTermsLine } from "@/payment/summary";
 import { formatCentral } from "@/time";
-import { getAnswers, updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
+import { getAnswers, updateAnswers, useAnswers } from "@/session/store";
 
 const CLIENT_TIMEOUT_MS = 3000;
 
@@ -37,21 +38,15 @@ async function fetchSummary(path: CostPath): Promise<CostSummary> {
   }
 }
 
-/** The plan name to show in "What you pay": a known plan's label, or the one typed under "Other". */
-function planName(answers: SessionAnswers): string | undefined {
-  const ins = answers.insurance;
-  if (!ins || ins.path !== "insured") return undefined;
-  if (ins.payerId && ins.payerId !== "other") return samplePayers.value.find((p) => p.id === ins.payerId)?.label;
-  if (ins.payerId === "other") return ins.payerOther;
-  return undefined;
-}
-
 export default function CostPage() {
   const answers = useAnswers();
   if (!answers) return <LoadingScreen />;
 
   const path = answers.insurance?.path ?? "not_sure";
-  const payLines = personalizedPay(path, planName(answers), answers.insurance?.addLater);
+  // "What you pay" is the pre-payment cost estimate (A1).
+  const payLines = [estimateLine(estimateFromAnswers(answers))];
+  const slotIso = answers.selectedSlot?.iso;
+  const changeLine = slotIso ? changeTermsLine(slotIso) : undefined;
 
   // One reason line for the visit card, built from the same facts as the match.
   const selected = answers.selectedClinician;
@@ -66,7 +61,8 @@ export default function CostPage() {
       clinician={selected?.name}
       role={clinician ? roleLabel[clinician.role] : undefined}
       reason={reason}
-      slotIso={answers.selectedSlot?.iso}
+      slotIso={slotIso}
+      changeLine={changeLine}
     />
   );
 }
@@ -84,28 +80,34 @@ function ChosenVisit({
   role,
   reason,
   slotIso,
+  changeLine,
 }: {
   clinicianId?: string;
   clinician: string;
   role?: string;
   reason?: string;
   slotIso?: string;
+  changeLine?: string;
 }) {
   return (
-    <section aria-label="Your chosen visit" className="flex items-start gap-3 rounded-lg bg-accent-soft p-4">
-      {clinicianId && <Portrait id={clinicianId} name={clinician} size={48} />}
-      <div className="flex flex-col gap-1">
-        <p className="text-sm text-ink-muted">Your first visit</p>
-        <p className="text-lg font-semibold">{clinician}</p>
-        {role && <p className="text-sm text-ink-muted">{role}</p>}
-        {reason && <p className="text-sm">{reason}</p>}
-        <p className="text-sm text-ink-muted">Video visit</p>
-        {/* Visit length is unknown (see docs/DECISIONS.md), so it is not shown. */}
-        {slotIso && <p className="text-base">{formatCentral(slotIso)}</p>}
-        <TextLink href="/match" className="self-start text-sm">
-          Change
-        </TextLink>
+    <section aria-label="Review your visit" className="flex flex-col gap-2 rounded-lg bg-accent-soft p-4">
+      <div className="flex items-start gap-3">
+        {clinicianId && <Portrait id={clinicianId} name={clinician} size={48} />}
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-medium text-ink-muted">Review your visit</p>
+          <p className="text-lg font-semibold">{clinician}</p>
+          {role && <p className="text-sm text-ink-muted">{role}</p>}
+          {reason && <p className="text-sm">{reason}</p>}
+          <p className="text-sm text-ink-muted">Video visit</p>
+          {/* Visit length is unknown (see docs/DECISIONS.md), so it is not shown. */}
+          {slotIso && <p className="text-base">{formatCentral(slotIso)}</p>}
+          <TextLink href="/match" className="self-start text-sm">
+            Change
+          </TextLink>
+        </div>
       </div>
+      <p className="text-sm text-ink-muted">Not booked yet. Nothing is charged until you book.</p>
+      {changeLine && <p className="text-sm text-ink">{changeLine}</p>}
     </section>
   );
 }
@@ -118,6 +120,7 @@ function CostScreen({
   role,
   reason,
   slotIso,
+  changeLine,
 }: {
   path: CostPath;
   payLines: string[];
@@ -126,6 +129,7 @@ function CostScreen({
   role?: string;
   reason?: string;
   slotIso?: string;
+  changeLine?: string;
 }) {
   const [summary, setSummary] = useState<CostSummary | null>(() => getAnswers().costSummaries?.[path] ?? null);
   useTrackOnce("cost.viewed", "cost.viewed", () => ({ insurance_path: path }));
@@ -163,7 +167,7 @@ function CostScreen({
       </div>
 
       {clinician && (
-        <ChosenVisit clinicianId={clinicianId} clinician={clinician} role={role} reason={reason} slotIso={slotIso} />
+        <ChosenVisit clinicianId={clinicianId} clinician={clinician} role={role} reason={reason} slotIso={slotIso} changeLine={changeLine} />
       )}
 
       <div className="flex flex-col gap-4">

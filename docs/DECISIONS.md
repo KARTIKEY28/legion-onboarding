@@ -347,3 +347,10 @@ Each entry says what was decided, why, and how to undo it.
 | 221 | Card time reason: with "Any time" it reads "Next opening: [day, date, time] CT" (the soonest slot), not the clinician's general windows; with a chip it reads "[Window] openings" | B3 | `ClinicianCard` in `src/app/match/page.tsx` |
 | 222 | Every clinician has a distinct schedule: a unique per-clinician minute (from its id) plus a small hour shift means no two clinicians ever show the same slot time. A test asserts the first two times are unique across all clinicians | B4 | `startTime` in `src/clinicians/schedule.ts` |
 | 223 | Avatars are curated per clinician: natural hair colors only (fixes Marco Reyes's pink hair), facial hair for he/him clinicians so portraits read with the pronouns, no glasses/accessories, calm expression, muted background. All 12 reviewed in a grid | B5 | `src/clinicians/portrait.ts` |
+
+## Funnel pass — Part C: Cost and terms, Confirmation
+
+| # | Decision | Why | To change it |
+| --- | --- | --- | --- |
+| 224 | Cost and terms: the summary card is labeled "Review your visit" and adds "Not booked yet. Nothing is charged until you book." "What you pay" now shows the pre-payment estimate (A1), and the under-48-hours / free-to-change line (A3) appears on the card when a time is selected | C1; reduce the account-creation drop by making cost and "nothing charged yet" explicit | `src/app/cost/page.tsx` |
+| 225 | Confirmation: the visit card shows the cost estimate (A1), and the reschedule terms use the A3 `changeTermsLine` (under-48-hours warning inside the window, free-to-change cutoff outside it, never a time that has already passed) | C2 | `src/app/confirmation/page.tsx` |
