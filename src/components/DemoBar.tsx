@@ -70,16 +70,14 @@ export function DemoBar() {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t-2 border-dashed border-line bg-surface/95 backdrop-blur">
+    <>
+      {/* Reserve space so the fixed bar never covers page content or the footer. */}
+      <div aria-hidden style={{ height: 56 }} />
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t-2 border-dashed border-line bg-surface/95 backdrop-blur">
       <div className="mx-auto w-full max-w-xl px-3 py-2">
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-2 text-sm font-medium text-ink-muted">
             <span aria-hidden>🛠</span> Demo controls
-            {stepIndex >= 0 && (
-              <span className="text-xs">
-                · step {stepIndex + 1} of {AFTER_VISIT_STEPS.length}
-              </span>
-            )}
           </span>
           <button
             type="button"
@@ -87,7 +85,7 @@ export function DemoBar() {
             aria-expanded={open}
             className="min-h-8 rounded-md border border-line px-3 py-1 text-sm"
           >
-            {open ? "Hide" : "Flip the demo controls"}
+            {open ? "Hide" : "Show demo controls"}
           </button>
         </div>
 
@@ -171,6 +169,7 @@ export function DemoBar() {
         )}
       </div>
     </div>
+    </>
   );
 }
 

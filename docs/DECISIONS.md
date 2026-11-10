@@ -362,3 +362,10 @@ Each entry says what was decided, why, and how to undo it.
 | 226 | "Your story" is now built only from concerns (natural phrases from phrases.ts), the patient's own words (redacted + safety-checked), and care preferences (language, clinician gender). Insurance, payment and logistics are removed. One label only: "Drafted from your answers. You can edit or remove anything." (the duplicate badge is gone). Same model rules and template fallback | D1; it is for the clinician, about care | `src/ai/previsit.ts`, `src/aftervisit/answers.ts`, `src/app/visit/before/page.tsx` |
 | 227 | Before your visit: when coverage is confirmed, the insurance card shows the cost estimate (A1); self pay shows the self-pay estimate | D2 | `src/app/visit/before/page.tsx` |
 | 228 | Day of visit: the device check runs automatically (checking → ready, or a problem with one plain fix and Try again). "Join video visit" is enabled only from 10 minutes before (otherwise "You can join from 10 minutes before. Your visit opens at [time] CT."). A "Before you join" card lists: a private quiet place, being in Texas during the visit, and **FLAGGED FOR LEGION:** "Have a list of any medications you take" (confirm this wording and whether to ask it) | D3 | `src/app/visit/day/page.tsx` |
+
+## Funnel pass — Part E: demo bar and labels
+
+| # | Decision | Why | To change it |
+| --- | --- | --- | --- |
+| 229 | Demo bar: the toggle reads "Show demo controls" (was "Flip the demo controls") and the "step X of 6" counter is gone. The bar reserves its height in page flow (a spacer) so it never covers content or the footer | E; cleaner, non-product | `src/components/DemoBar.tsx` |
+| 230 | One prototype label only: the top "Prototype. Internal preview" banner is removed; the footer synthetic-data note stays, and after-payment screens keep "Design proposal, not Legion's current experience." | E; a single, clear label | `src/app/layout.tsx` |

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { CrisisHelp } from "@/components/CrisisHelp";
 import { DemoBar } from "@/components/DemoBar";
-import { DevLabel } from "@/components/ui";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,7 +23,6 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} flex min-h-screen flex-col antialiased`}>
         <CrisisHelp />
-        <DevLabel />
         <div className="flex-1">{children}</div>
         <footer className="flex flex-col gap-1 border-t border-line px-4 py-4 text-center text-sm text-ink-muted">
           <p>Prototype with synthetic data. Please don&apos;t enter real health information.</p>
