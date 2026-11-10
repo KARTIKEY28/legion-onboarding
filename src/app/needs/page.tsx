@@ -4,16 +4,9 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { getTracker } from "@/analytics/client";
 import { useTrackOnce } from "@/analytics/hooks";
-import {
-  AVAILABILITY_WINDOWS,
-  CLINICIAN_GENDERS,
-  LANGUAGES,
-  type AvailabilityWindow,
-  type ClinicianGender,
-  type LanguageId,
-} from "@/clinicians/model";
+import { CLINICIAN_GENDERS, LANGUAGES, type ClinicianGender, type LanguageId } from "@/clinicians/model";
 import { RadioQuestion } from "@/components/form";
-import { CheckOption, CrisisPanel, SafeFreeText } from "@/components/safety";
+import { CrisisPanel, SafeFreeText } from "@/components/safety";
 import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, barPrimary } from "@/components/ui";
 import { localSafetyCheck } from "@/safety/local";
 import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
@@ -29,16 +22,11 @@ export default function NeedsPage() {
 
 function NeedsForm({ initial }: { initial: SessionAnswers["needs"] }) {
   const router = useRouter();
-  const [availability, setAvailability] = useState<AvailabilityWindow[]>(initial?.availability ?? []);
   const [language, setLanguage] = useState<LanguageId | typeof NO_PREFERENCE>(initial?.language ?? NO_PREFERENCE);
   const [gender, setGender] = useState<ClinicianGender | typeof NO_PREFERENCE>(initial?.gender ?? NO_PREFERENCE);
   const [note, setNote] = useState(initial?.note ?? "");
   const [panelShown, setPanelShown] = useState(false);
   const panelRef = useRef<HTMLElement>(null);
-
-  function toggle(id: AvailabilityWindow, checked: boolean) {
-    setAvailability((current) => (checked ? [...current, id] : current.filter((w) => w !== id)));
-  }
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -50,14 +38,14 @@ function NeedsForm({ initial }: { initial: SessionAnswers["needs"] }) {
     }
     updateAnswers({
       needs: {
-        availability,
+        // Time of day moved to a filter on the Match step; no availability asked here.
+        availability: [],
         language: language === NO_PREFERENCE ? undefined : language,
         gender: gender === NO_PREFERENCE ? undefined : gender,
         note: text || undefined,
       },
     });
     getTracker()("needs.submitted", {
-      answered_availability: availability.length > 0,
       answered_language: language !== NO_PREFERENCE,
       answered_gender: gender !== NO_PREFERENCE,
       free_text_used: Boolean(text),
@@ -74,21 +62,6 @@ function NeedsForm({ initial }: { initial: SessionAnswers["needs"] }) {
       </div>
 
       <form noValidate onSubmit={submit} className="flex flex-col gap-8">
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-1 text-lg font-semibold">When could you usually meet?</legend>
-          <p className="text-ink-muted">Choose any that work. We&apos;ll look for clinicians with openings then.</p>
-          <div className="flex flex-col gap-2">
-            {AVAILABILITY_WINDOWS.map((window) => (
-              <CheckOption
-                key={window.id}
-                label={window.label}
-                checked={availability.includes(window.id)}
-                onChange={(checked) => toggle(window.id, checked)}
-              />
-            ))}
-          </div>
-        </fieldset>
-
         <RadioQuestion
           id="language"
           legend="Language for your visits"

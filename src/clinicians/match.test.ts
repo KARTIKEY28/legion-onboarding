@@ -10,7 +10,7 @@ import {
   widenGains,
   type MatchInput,
 } from "./match";
-import { openSlots } from "./schedule";
+import { nextSlots, openSlots } from "./schedule";
 
 const NOW = new Date("2026-11-02T12:00:00.000Z");
 
@@ -131,6 +131,17 @@ describe("soft score orders strong matches", () => {
   it("is deterministic", () => {
     const input: MatchInput = { topics: ["low_mood", "worry"], windows: [] };
     expect(ids(matchClinicians(input, NOW).strongMatches)).toEqual(ids(matchClinicians(input, NOW).strongMatches));
+  });
+});
+
+describe("distinct schedules", () => {
+  it("no two clinicians show the same first two times in the default view", () => {
+    const firstTwo = CLINICIANS.filter((c) => !c.fullyBooked).map((c) =>
+      nextSlots(c, NOW, undefined, 2)
+        .map((s) => s.iso)
+        .join("|"),
+    );
+    expect(new Set(firstTwo).size).toBe(firstTwo.length);
   });
 });
 

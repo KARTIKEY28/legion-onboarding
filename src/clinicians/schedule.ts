@@ -21,6 +21,17 @@ const WINDOW_HOUR: Record<AvailabilityWindow, number> = {
   weekends: 11,
 };
 
+/**
+ * A per-clinician start time inside the day-part. The minute is unique per
+ * clinician (derived from its id), so no two clinicians ever show the same slot
+ * time; the hour shifts by up to an hour for a little variety.
+ */
+function startTime(clinician: Clinician, window: AvailabilityWindow): { hour: number; minute: number } {
+  const n = parseInt(clinician.id.replace(/\D/g, ""), 10) || 0;
+  const hourOffset = hash(`${clinician.id}:${window}`) % 2; // 0 or 1
+  return { hour: WINDOW_HOUR[window] + hourOffset, minute: (n % 12) * 5 };
+}
+
 function isWeekend(day: number): boolean {
   return day === 0 || day === 6;
 }
@@ -42,10 +53,11 @@ function hash(s: string): number {
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function label(date: Date, hour: number): string {
+function label(date: Date, hour: number, minute: number): string {
   const h12 = hour % 12 === 0 ? 12 : hour % 12;
   const ampm = hour < 12 ? "AM" : "PM";
-  return `${DAYS[date.getDay()]}, ${MONTHS[date.getMonth()]} ${date.getDate()}, ${h12}:00 ${ampm}`;
+  const mm = minute.toString().padStart(2, "0");
+  return `${DAYS[date.getDay()]}, ${MONTHS[date.getMonth()]} ${date.getDate()}, ${h12}:${mm} ${ampm}`;
 }
 
 /**
@@ -65,10 +77,10 @@ export function openSlots(clinician: Clinician, now: Date, windows?: Availabilit
       if (!windowForDay(window, day)) continue;
       // Open about two days out of three, deterministically.
       if (hash(`${clinician.id}:${offset}:${window}`) % 3 === 0) continue;
-      const hour = WINDOW_HOUR[window];
+      const { hour, minute } = startTime(clinician, window);
       const at = new Date(date);
-      at.setHours(hour, 0, 0, 0);
-      slots.push({ iso: at.toISOString(), label: label(at, hour), window });
+      at.setHours(hour, minute, 0, 0);
+      slots.push({ iso: at.toISOString(), label: label(at, hour, minute), window });
     }
   }
   return slots.sort((a, b) => a.iso.localeCompare(b.iso));

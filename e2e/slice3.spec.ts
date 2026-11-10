@@ -12,7 +12,6 @@ async function finishSafetyAndNeeds(page: Page) {
   await page.getByRole("button", { name: "Continue" }).click();
   await choosePath(page, "I'll pay without insurance");
   await expect(page.getByText("Step 6 of 10 · Needs")).toBeVisible();
-  await page.getByLabel("Weekday evenings").check();
   await page.getByRole("group", { name: /Language/ }).getByLabel("Spanish", { exact: true }).check();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/match$/);
@@ -41,7 +40,6 @@ test("happy path: Conditions, Safety and Needs record clean events", async ({ pa
   expect(byName("safety.submitted")).toHaveLength(1);
   expect(byName("safety.escalated")).toHaveLength(0);
   expect(byName("needs.submitted")[0].properties).toEqual({
-    answered_availability: true,
     answered_language: true,
     answered_gender: false,
     free_text_used: false,
@@ -128,7 +126,6 @@ test("no event contains free text, health answers or identifiers", async ({ page
   await page.getByRole("group", { name: /hospital/ }).getByLabel("Yes", { exact: true }).check();
   await page.getByRole("button", { name: "Continue" }).click();
   await choosePath(page, "I'll pay without insurance");
-  await page.getByLabel("Weekends").check();
   await page.getByLabel(/Anything else you want your clinician to know/).fill(note);
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/match$/);

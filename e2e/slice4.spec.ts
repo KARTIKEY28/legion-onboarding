@@ -21,8 +21,9 @@ async function toCost(page: Page) {
   await expect(page.getByText("Step 6 of 10 · Needs")).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByText("Step 7 of 10 · Match")).toBeVisible();
-  // Pick the first open time on the top match to reach Cost and terms.
+  // Pick the first open time on the top match, then confirm in the sticky bar.
   await page.getByRole("article").first().getByRole("button", { name: /AM|PM/ }).first().click();
+  await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByText("Step 8 of 10 · Cost and terms")).toBeVisible();
 }
 

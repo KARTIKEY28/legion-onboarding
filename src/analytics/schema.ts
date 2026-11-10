@@ -92,7 +92,6 @@ export const EVENTS = {
   "needs.viewed": event("needs"),
   // Which fields were answered, never their values
   "needs.submitted": event("needs", {
-    answered_availability: z.boolean(),
     answered_language: z.boolean(),
     answered_gender: z.boolean(),
     free_text_used: z.boolean(),
@@ -105,6 +104,12 @@ export const EVENTS = {
   }),
   "match.full_list_opened": event("match"),
   "match.none_selected": event("match"),
+  // The time-of-day filter chip changed (value only).
+  "match.time_filter_changed": event("match", {
+    value: z.enum(["any", "weekday_mornings", "weekday_afternoons", "weekday_evenings", "weekends"]),
+  }),
+  // A time was tapped on a card or in the profile (selection, not yet confirmed).
+  "slot.selected": event("match"),
   // Opening a clinician profile; rank and where it was opened from, never the name
   "profile.opened": event("match", {
     from: z.enum(["card", "full_list"]),
