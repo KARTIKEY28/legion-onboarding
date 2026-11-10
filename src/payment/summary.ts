@@ -42,6 +42,26 @@ export function freeToRescheduleLine(slotIso: string): string {
   return `Free to reschedule until ${cancellationCutoff(slotIso)}. After that, cancelling may cost $${cancellation.followUpFee.value}.`;
 }
 
+/** True when the visit is less than the cancellation window (48 hours) from now. */
+export function isWithinCancellationWindow(slotIso: string, now: Date = new Date()): boolean {
+  const ms = new Date(slotIso).getTime() - now.getTime();
+  return ms < cancellation.windowHours.value * 60 * 60 * 1000;
+}
+
+/** The under-48-hours warning: names the window and the cancellation fee (from facts). */
+export function under48Line(): string {
+  return `This visit is less than ${cancellation.windowHours.value} hours away. If you cancel, a $${cancellation.followUpFee.value} fee may apply.`;
+}
+
+/**
+ * The change-terms line for Cost and Confirmation: inside the window it shows the
+ * under-48-hours warning (never a free-to-change time that has already passed);
+ * otherwise the free-to-change cutoff.
+ */
+export function changeTermsLine(slotIso: string, now: Date = new Date()): string {
+  return isWithinCancellationWindow(slotIso, now) ? under48Line() : freeToChangeLine(slotIso);
+}
+
 /** The on-file card line for the confirmation; insured adds a coverage line. */
 export function cardOnFileLines(path: PaymentPath): string[] {
   const lines = [`Your card is on file. You're charged about ${cardTerms.chargeDaysAfterVisit.value} days after your visit.`];

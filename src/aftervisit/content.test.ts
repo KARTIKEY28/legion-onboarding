@@ -8,6 +8,7 @@ const base: VisitContext = {
   path: "insured",
   insuranceState: "checking",
   smsConsent: true,
+  estimate: { result: "self_pay" },
 };
 
 const joined = (ctx: VisitContext) => reminderCards(ctx).map((c) => c.email.body.join(" "));

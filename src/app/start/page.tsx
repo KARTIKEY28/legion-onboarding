@@ -1,5 +1,5 @@
 import { ActionBar, PrimaryLink, Progress, Screen, TextLink, barPrimary } from "@/components/ui";
-import { eligibility } from "@/facts";
+import { eligibility, selfPayPrices } from "@/facts";
 import { flags } from "@/flags";
 import { StartTracker } from "./StartTracker";
 
@@ -36,6 +36,10 @@ export default function StartPage() {
             </li>
           ))}
         </ol>
+        <p>
+          Visits are ${selfPayPrices.initialVisit.value} without insurance. With insurance, we&apos;ll estimate your cost
+          before you book.
+        </p>
         <p className="text-ink-muted">It takes a few minutes.</p>
       </section>
 

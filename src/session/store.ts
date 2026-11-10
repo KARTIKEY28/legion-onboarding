@@ -53,6 +53,8 @@ export interface SessionAnswers {
   };
   /** The answer when "not sure" about Medicare or Medicaid was asked again on Insurance. */
   coverageAtInsurance?: "yes" | "no" | "unsure";
+  /** The simulated eligibility/cost result from the Insurance step (synthetic, from plans.ts). */
+  eligibilityCost?: { result: "copay" | "deductible" | "not_covered" | "failed" | "self_pay"; payerId?: string };
   /** The clinician the patient picked on Match. */
   selectedClinician?: { id: string; name: string };
   /** The time the patient picked. iso is the slot; label is for display. */

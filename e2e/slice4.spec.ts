@@ -57,6 +57,21 @@ test("insured path: details are asked, nothing is verified, and the cost uses th
   expect(props("cost_summary.validation_failed")).toEqual([]);
 });
 
+test("insured path: a simulated eligibility check runs and reports a cost result type", async ({ page }) => {
+  await setModel(page, "fail");
+  await toInsurance(page);
+  await page.getByLabel("I have insurance", { exact: true }).check();
+  await page.getByLabel("Plan or insurer", { exact: true }).selectOption({ label: "Sample Insurance Co." });
+  await page.getByLabel("Member ID").fill("SYN-MEMBER-778899");
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  await expect(page.getByText("Checking your coverage")).toBeVisible();
+  await expect(page.getByText("Step 6 of 10 · Needs")).toBeVisible();
+
+  const checked = (await events(page)).filter((e) => e.event === "eligibility.checked_cost");
+  expect(checked.map((e) => e.properties)).toEqual([{ result: "deductible" }]); // Sample Insurance Co. has a deductible left
+});
+
 test("insured path: missing details get calm errors, and 'add this later' skips them", async ({ page }) => {
   await toInsurance(page);
   await page.getByLabel("I have insurance", { exact: true }).check();
