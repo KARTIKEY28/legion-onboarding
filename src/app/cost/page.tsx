@@ -8,7 +8,7 @@ import { CLINICIANS } from "@/clinicians/data";
 import { facts, matchInputFromAnswers } from "@/clinicians/match";
 import { roleLabel } from "@/clinicians/roles";
 import { ActionBar, LoadingScreen, PrimaryLink, Progress, Screen, TextLink, barPrimary } from "@/components/ui";
-import { Portrait } from "@/components/Portrait";
+import { VisitSummary } from "@/components/VisitSummary";
 import { estimateFromAnswers, estimateLine } from "@/data/estimate";
 import { changeTermsLine } from "@/payment/summary";
 import { formatCentral } from "@/time";
@@ -90,25 +90,27 @@ function ChosenVisit({
   changeLine?: string;
 }) {
   return (
-    <section aria-label="Review your visit" className="flex flex-col gap-2 rounded-lg bg-accent-soft p-4">
-      <div className="flex items-start gap-3">
-        {clinicianId && <Portrait id={clinicianId} name={clinician} size={48} />}
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium text-ink-muted">Review your visit</p>
-          <p className="text-lg font-semibold">{clinician}</p>
-          {role && <p className="text-sm text-ink-muted">{role}</p>}
-          {reason && <p className="text-sm">{reason}</p>}
-          <p className="text-sm text-ink-muted">Video visit</p>
-          {/* Visit length is unknown (see docs/DECISIONS.md), so it is not shown. */}
-          {slotIso && <p className="text-base">{formatCentral(slotIso)}</p>}
-          <TextLink href="/match" className="self-start text-sm">
-            Change
-          </TextLink>
-        </div>
-      </div>
-      <p className="text-sm text-ink-muted">Not booked yet. Nothing is charged until you book.</p>
-      {changeLine && <p className="text-sm text-ink">{changeLine}</p>}
-    </section>
+    <VisitSummary
+      label="Review your visit"
+      eyebrow="Review your visit"
+      clinicianId={clinicianId}
+      clinicianName={clinician}
+      role={role}
+      footer={
+        <>
+          <p className="text-sm text-ink-muted">Not booked yet. Nothing is charged until you book.</p>
+          {changeLine && <p className="text-sm text-ink">{changeLine}</p>}
+        </>
+      }
+    >
+      {reason && <p className="text-sm">{reason}</p>}
+      <p className="text-sm text-ink-muted">Video visit</p>
+      {/* Visit length is unknown (see docs/DECISIONS.md), so it is not shown. */}
+      {slotIso && <p className="text-base">{formatCentral(slotIso)}</p>}
+      <TextLink href="/match" className="self-start text-sm">
+        Change
+      </TextLink>
+    </VisitSummary>
   );
 }
 

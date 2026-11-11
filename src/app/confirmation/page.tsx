@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { getTracker } from "@/analytics/client";
 import { useTrackOnce } from "@/analytics/hooks";
 import { AfterVisitAction, AfterVisitScreen } from "@/components/aftervisit";
-import { Portrait } from "@/components/Portrait";
+import { VisitSummary } from "@/components/VisitSummary";
 import { LoadingScreen, secondaryClass } from "@/components/ui";
 import { buildIcs } from "@/aftervisit/content";
 import { CLINICIANS } from "@/clinicians/data";
@@ -75,26 +75,17 @@ function Confirmed({
         <p className="text-ink-muted">Your first visit is set. Here&apos;s everything you need.</p>
       </div>
 
-      <section aria-label="Your visit" className="flex items-start gap-3 rounded-lg bg-accent-soft p-4">
-        {clinicianId && <Portrait id={clinicianId} name={clinicianName ?? "your clinician"} size={48} />}
-        <div className="flex flex-col gap-1">
-          <p className="text-sm text-ink-muted">Video visit</p>
-          <p className="text-lg font-semibold">{clinicianName ?? "Your clinician"}</p>
-          <p data-testid="confirmation-when" className="text-base">
-            {slotIso ? formatCentral(slotIso) : "Time to be confirmed"}
-          </p>
-          <p data-testid="confirmation-cost" className="text-sm text-ink-muted">
-            {estimate}
-          </p>
-          <button
-            type="button"
-            onClick={addToCalendar}
-            className={`${secondaryClass} mt-2 self-start`}
-          >
-            Add to calendar
-          </button>
-        </div>
-      </section>
+      <VisitSummary label="Your visit" clinicianId={clinicianId} clinicianName={clinicianName}>
+        <p data-testid="confirmation-when" className="text-base">
+          {slotIso ? formatCentral(slotIso) : "Time to be confirmed"}
+        </p>
+        <p data-testid="confirmation-cost" className="text-sm text-ink-muted">
+          {estimate}
+        </p>
+        <button type="button" onClick={addToCalendar} className={`${secondaryClass} mt-2 self-start`}>
+          Add to calendar
+        </button>
+      </VisitSummary>
 
       {clinicianId && slotIso && <Reschedule clinicianId={clinicianId} clinicianName={clinicianName ?? "your clinician"} slotIso={slotIso} />}
 

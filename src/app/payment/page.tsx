@@ -6,11 +6,12 @@ import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { getTracker } from "@/analytics/client";
 import { CLINICIANS } from "@/clinicians/data";
 import { nextSlots, type Slot } from "@/clinicians/schedule";
-import { Portrait } from "@/components/Portrait";
+import { VisitSummary } from "@/components/VisitSummary";
 import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, TextLink, barPrimary, secondaryClass } from "@/components/ui";
+import { estimateFromAnswers, estimateLine } from "@/data/estimate";
 import { scenarioForCard, TEST_CARDS, maskCard } from "@/payment/cards";
 import type { BookingResult, PaymentScenario } from "@/payment/booking";
-import { bookingCostLine, cancellationLine, cardHoldLine, type PaymentPath } from "@/payment/summary";
+import { cancellationLine, cardHoldLine } from "@/payment/summary";
 import { getAnswers, updateAnswers, useAnswers } from "@/session/store";
 import { formatCentral } from "@/time";
 import { slotTakenArmed } from "@/devtoggles";
@@ -33,10 +34,10 @@ export default function PaymentPage() {
       </Screen>
     );
   }
-  return <PaymentScreen path={answers.insurance?.path ?? "not_sure"} />;
+  return <PaymentScreen />;
 }
 
-function PaymentScreen({ path }: { path: PaymentPath }) {
+function PaymentScreen() {
   const router = useRouter();
   const [card, setCard] = useState("");
   const [expiry, setExpiry] = useState("");
@@ -138,15 +139,11 @@ function PaymentScreen({ path }: { path: PaymentPath }) {
       </div>
 
       {/* Booking summary */}
-      <section aria-label="Booking summary" className="flex items-start gap-3 rounded-lg bg-accent-soft p-4">
-        <Portrait id={clinician.id} name={clinician.name} size={48} />
-        <div className="flex flex-col gap-1">
-        <p className="text-sm text-ink-muted">Video visit</p>
-        <p className="text-lg font-semibold">{clinician.name}</p>
+      <VisitSummary label="Booking summary" clinicianId={clinician.id} clinicianName={clinician.name}>
         <p data-testid="booking-when" className="text-base">
           {formatCentral(slot.iso)}
         </p>
-        <p className="text-base">{bookingCostLine(path)}</p>
+        <p className="text-base">{estimateLine(estimateFromAnswers(getAnswers()))}</p>
         <p className="text-sm text-ink-muted">{cancellationLine()}</p>
         <div className="mt-1 flex gap-4">
           <TextLink href="/match" className="text-sm">
@@ -156,8 +153,7 @@ function PaymentScreen({ path }: { path: PaymentPath }) {
             Change cost details
           </TextLink>
         </div>
-        </div>
-      </section>
+      </VisitSummary>
 
       {status === "slot_taken" ? (
         <SlotTaken slots={takenSlots ?? []} onPick={pickNewTime} clinicianName={clinician.name} />
