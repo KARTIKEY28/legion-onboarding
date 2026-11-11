@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { maskedFromFields } from "@/components/form";
-import { Portrait } from "@/components/Portrait";
+import { VisitSummary } from "@/components/VisitSummary";
 import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, TextLink, barPrimary, secondaryClass } from "@/components/ui";
 import { formatCentral } from "@/time";
 import { getAnswers, updateAnswers, useAnswers } from "@/session/store";
@@ -133,14 +133,13 @@ function AccountForm() {
       </div>
 
       {saved.selectedClinician && (
-        <section aria-label="Your chosen visit" className="flex items-start gap-3 rounded-lg bg-accent-soft p-4">
-          <Portrait id={saved.selectedClinician.id} name={saved.selectedClinician.name} size={48} />
-          <div className="flex flex-col gap-1">
-            <p className="text-sm text-ink-muted">Video visit</p>
-            <p className="text-lg font-semibold">{saved.selectedClinician.name}</p>
-            {saved.selectedSlot && <p className="text-base">{formatCentral(saved.selectedSlot.iso)}</p>}
-          </div>
-        </section>
+        <VisitSummary
+          label="Your chosen visit"
+          clinicianId={saved.selectedClinician.id}
+          clinicianName={saved.selectedClinician.name}
+        >
+          {saved.selectedSlot && <p className="text-base">{formatCentral(saved.selectedSlot.iso)}</p>}
+        </VisitSummary>
       )}
 
       <form
