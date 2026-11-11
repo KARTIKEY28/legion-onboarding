@@ -52,10 +52,15 @@ for review.
 
 ## Visual rules
 
+**The full visual system — tokens, colour meanings, shape, type and the ten UX rules —
+is [docs/DESIGN.md](docs/DESIGN.md). Read it before any styling change.** In short:
+
 - **One primary action per screen.** Everything else is secondary or a text link.
-- **Colors come from tokens** in `src/app/globals.css`, with one accent. Tailwind's default
-  palette is switched off, so only token colors exist: `canvas`, `surface`, `ink`, `ink-muted`,
-  `line`, `accent`, `accent-ink`, `accent-soft`, `danger`, `danger-soft`.
+- **Colors come from tokens** in `src/app/globals.css`, with one accent (Legion blue). Tailwind's
+  default palette is switched off, so only token colors exist: `canvas`, `surface`, `ink`,
+  `ink-muted`, `line`, `accent`, `accent-dark`, `accent-soft`, `accent-ink`, `confirmed`,
+  `confirmed-tint`, `caution`, `caution-tint`. Each colour carries one meaning (accent = primary/
+  links/selected/progress; confirmed = booked/verified/passed/confirmed; caution = form validation).
 - **Fixed type scale:** `text-sm`, `text-base`, `text-lg`, `text-xl`, `text-2xl`. The defaults
   are switched off, so nothing else exists.
 - **Fixed spacing scale** (multiples of 4px): `1, 2, 3, 4, 6, 8, 12, 16`, e.g. `p-4`, `gap-6`.

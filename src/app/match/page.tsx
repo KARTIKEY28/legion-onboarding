@@ -23,7 +23,7 @@ import { nextSlots, openSlots, type Slot } from "@/clinicians/schedule";
 import { type AvailabilityWindow } from "@/clinicians/model";
 import { concernPhrase, joinPhrases, languagePhrase } from "@/data/phrases";
 import { estimateFromAnswers, estimateLine } from "@/data/estimate";
-import { LoadingScreen, Progress, Screen, TextLink } from "@/components/ui";
+import { LoadingScreen, Progress, Screen, TextLink, secondaryClass } from "@/components/ui";
 import { formatCentral } from "@/time";
 import { isWithinCancellationWindow, under48Line } from "@/payment/summary";
 import { slotTakenArmed } from "@/devtoggles";
@@ -371,12 +371,12 @@ function ConfirmBar({
             {clinician.name} · {formatCentral(selection.slot.iso)}
           </p>
           <p className="truncate text-xs text-ink-muted">{estimate}</p>
-          {under48 && <p className="truncate text-xs text-danger">{under48}</p>}
+          {under48 && <p className="truncate text-xs font-medium text-ink">{under48}</p>}
         </div>
         <button
           type="button"
           onClick={onContinue}
-          className="min-h-11 shrink-0 rounded-md bg-accent px-6 py-2 text-base font-medium text-accent-ink"
+          className="min-h-11 shrink-0 rounded-full bg-accent px-6 py-2 text-base font-medium text-accent-ink hover:bg-accent-dark"
         >
           Continue
         </button>
@@ -455,7 +455,18 @@ function ClinicianCard({
         </ul>
       )}
 
-      {evLine && <p className="text-xs text-ink-muted">{evLine}</p>}
+      {evLine && (
+        <p className="text-xs text-ink-muted">
+          {evLine.startsWith("Illustrative:") ? (
+            <>
+              <span className="micro">Illustrative</span>
+              {evLine.slice("Illustrative".length)}
+            </>
+          ) : (
+            evLine
+          )}
+        </p>
+      )}
 
       {taken && (
         <p role="status" className="rounded-md bg-accent-soft px-3 py-2 text-sm">
@@ -563,7 +574,7 @@ function NotifyMe({ initialEmail }: { initialEmail?: string }) {
         We&apos;ll only use this to tell you about openings. In this prototype, nothing is sent.
       </p>
       {error && (
-        <p id="notify-error" className="text-danger">
+        <p id="notify-error" className="text-caution">
           {error}
         </p>
       )}
@@ -575,9 +586,9 @@ function NotifyMe({ initialEmail }: { initialEmail?: string }) {
         onChange={(e) => setEmail(e.target.value)}
         aria-describedby={`notify-purpose${error ? " notify-error" : ""}`}
         aria-invalid={Boolean(error)}
-        className={`min-h-11 rounded-md border bg-surface px-3 text-base ${error ? "border-danger" : "border-line"}`}
+        className={`min-h-11 rounded-md border bg-surface px-3 text-base ${error ? "border-caution" : "border-line"}`}
       />
-      <button type="submit" className="min-h-11 self-start rounded-md border border-accent bg-surface px-6 py-2 font-medium text-accent">
+      <button type="submit" className={`${secondaryClass} self-start`}>
         Email me
       </button>
     </form>

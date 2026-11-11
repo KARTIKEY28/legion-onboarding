@@ -66,7 +66,7 @@ function IntakeForms({ answers }: { answers: SessionAnswers }) {
         <Prefill label="Safety questions" value={safetyAnswered ? "Answered" : "Not answered"} />
       </dl>
       {done ? (
-        <p role="status" className="rounded-md bg-accent-soft px-4 py-2">Thanks. Your details are confirmed.</p>
+        <p role="status" className="rounded-md bg-confirmed-tint px-4 py-2 text-confirmed">Thanks. Your details are confirmed.</p>
       ) : (
         <button type="button" onClick={confirm} className={`${secondaryClass} self-start`}>
           Confirm my details
@@ -160,7 +160,7 @@ function PhotoId() {
   return (
     <Card title="Photo ID" tag="Optional">
       <p className="text-ink-muted">A photo ID helps us confirm who you are. You can do this later.</p>
-      <p className="rounded-md bg-danger-soft px-4 py-2 text-sm">
+      <p className="rounded-md border border-line bg-canvas px-4 py-2 text-sm text-ink-muted">
         Demo only. Don&apos;t upload a real ID. Here&apos;s a synthetic sample. Nothing you add is stored after this preview.
       </p>
       {/* eslint-disable-next-line @next/next/no-img-element -- a static synthetic SVG, no optimization needed */}
@@ -205,7 +205,7 @@ function InsuranceStatus({ path, estimate }: { path: "insured" | "self_pay" | "n
   const copy = INSURANCE_COPY[state];
   return (
     <Card title="Insurance">
-      <p data-testid="insurance-state" data-state={state} className="text-lg font-medium">{copy.title}</p>
+      <p data-testid="insurance-state" data-state={state} className={`text-lg font-medium ${state === "confirmed" ? "text-confirmed" : ""}`}>{copy.title}</p>
       <p className="text-ink-muted">{copy.body}</p>
       {/* When coverage is verified, show the cost estimate (A1 / D2). */}
       {state === "confirmed" ? <p className="text-base">{estimate}</p> : <p className="text-sm text-ink-muted">{copy.can}</p>}

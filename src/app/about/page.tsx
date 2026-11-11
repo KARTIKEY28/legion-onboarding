@@ -122,12 +122,12 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
       </div>
 
       {errorList.length > 0 && submitted && (
-        <div ref={summaryRef} tabIndex={-1} role="alert" className="flex flex-col gap-2 rounded-md bg-danger-soft p-4">
+        <div ref={summaryRef} tabIndex={-1} role="alert" className="flex flex-col gap-2 rounded-md bg-caution-tint p-4">
           <p className="font-semibold">A couple of answers still need a look</p>
           <ul className="flex flex-col gap-1">
             {errorList.map(([field, message]) => (
               <li key={field}>
-                <a href={`#${field}`} className="text-danger underline underline-offset-2">
+                <a href={`#${field}`} className="text-caution underline underline-offset-2">
                   {message}
                 </a>
               </li>

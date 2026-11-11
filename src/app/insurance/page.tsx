@@ -16,7 +16,7 @@ type CoverageAnswer = NonNullable<SessionAnswers["coverageAtInsurance"]>;
 const OTHER = "other";
 
 const inputClass = (error?: string) =>
-  `min-h-12 rounded-md border bg-surface px-3 text-base ${error ? "border-danger" : "border-line"}`;
+  `min-h-12 rounded-md border bg-surface px-3 text-base ${error ? "border-caution" : "border-line"}`;
 
 /** The calm ~2 second "checking your coverage" state after an insured submit. */
 function CheckingCoverage() {
@@ -142,12 +142,12 @@ function InsuranceForm({ answers }: { answers: SessionAnswers }) {
       </div>
 
       {errorList.length > 0 && (
-        <div ref={summaryRef} tabIndex={-1} role="alert" className="flex flex-col gap-2 rounded-md bg-danger-soft p-4">
+        <div ref={summaryRef} tabIndex={-1} role="alert" className="flex flex-col gap-2 rounded-md bg-caution-tint p-4">
           <p className="font-semibold">A couple of answers still need a look</p>
           <ul className="flex flex-col gap-1">
             {errorList.map(([field, message]) => (
               <li key={field}>
-                <a href={`#${field}`} className="text-danger underline underline-offset-2">
+                <a href={`#${field}`} className="text-caution underline underline-offset-2">
                   {message}
                 </a>
               </li>
@@ -224,7 +224,7 @@ function InsuranceForm({ answers }: { answers: SessionAnswers }) {
                     Sample plan names for this prototype.
                   </p>
                   {shown.payer && (
-                    <p id="payer-error" className="text-danger">
+                    <p id="payer-error" className="text-caution">
                       {shown.payer}
                     </p>
                   )}
@@ -269,7 +269,7 @@ function InsuranceForm({ answers }: { answers: SessionAnswers }) {
                     Usually on the front of your insurance card.
                   </p>
                   {shown.member && (
-                    <p id="member-error" className="text-danger">
+                    <p id="member-error" className="text-caution">
                       {shown.member}
                     </p>
                   )}

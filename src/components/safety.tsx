@@ -24,7 +24,7 @@ export const CrisisPanel = forwardRef<HTMLElement, { variant?: "concern" | "gent
       role="region"
       aria-labelledby="crisis-panel-heading"
       aria-live="polite"
-      className="flex flex-col gap-3 rounded-lg border border-accent bg-accent-soft p-4"
+      className="flex flex-col gap-3 rounded-lg border border-line border-l-[3px] border-l-accent bg-surface p-4"
     >
       <h2 id="crisis-panel-heading" className="text-lg font-semibold">
         {variant === "concern" ? "Thank you for telling us. You don't have to wait to talk to someone." : "If things feel hard right now, help is here."}

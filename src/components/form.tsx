@@ -48,7 +48,7 @@ export function RadioQuestion<V extends string>({
         </p>
       )}
       {error && (
-        <p id={`${id}-error`} className="text-danger">
+        <p id={`${id}-error`} className="text-caution">
           {error}
         </p>
       )}
@@ -127,7 +127,7 @@ export function DobQuestion({
         it to continue.
       </p>
       {error && (
-        <p id="dob-error" className="text-danger">
+        <p id="dob-error" className="text-caution">
           {error}
         </p>
       )}
@@ -143,7 +143,7 @@ export function DobQuestion({
         aria-describedby={`dob-reason${error ? " dob-error" : ""}`}
         aria-invalid={Boolean(error)}
         className={`min-h-11 w-44 rounded-md border bg-surface px-3 text-base text-ink ${
-          error ? "border-danger" : "border-line"
+          error ? "border-caution" : "border-line"
         }`}
       />
       {note}

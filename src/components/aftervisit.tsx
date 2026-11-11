@@ -73,7 +73,7 @@ export function AfterVisitAction({ href, children }: { href: string; children: R
   return (
     <Link
       href={href}
-      className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-accent px-6 py-3 text-base font-medium text-accent-ink md:w-auto md:self-start"
+      className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-6 py-3 text-base font-medium text-accent-ink hover:bg-accent-dark md:w-auto md:self-start"
     >
       {children}
     </Link>

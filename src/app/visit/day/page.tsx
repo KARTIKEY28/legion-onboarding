@@ -51,14 +51,14 @@ function DeviceCheck({ problem }: { problem: boolean }) {
         {CHECKS.map((c) => (
           <li key={c} className="flex items-center justify-between">
             <span>{c}</span>
-            <span className={state === "ok" ? "text-accent" : "text-ink-muted"} data-testid={`check-${c.toLowerCase()}`}>
+            <span className={state === "ok" ? "text-confirmed" : "text-ink-muted"} data-testid={`check-${c.toLowerCase()}`}>
               {state === "checking" ? "Checking…" : state === "ok" ? "Ready" : "Needs attention"}
             </span>
           </li>
         ))}
       </ul>
       {state === "problem" && (
-        <div role="status" className="flex flex-col gap-2 rounded-md bg-danger-soft px-4 py-3 text-sm">
+        <div role="status" className="flex flex-col gap-2 rounded-md border border-line bg-canvas px-4 py-3 text-sm">
           <p>
             Your camera or microphone looks blocked. In your browser&apos;s address bar, allow camera and microphone for
             this site, then try again.

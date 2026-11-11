@@ -17,8 +17,8 @@ export default function StartPage() {
       <div className="flex flex-col gap-4">
         <h1 className="text-2xl font-semibold">Find a clinician who fits you</h1>
         <p>
-          Legion offers virtual visits with clinicians, for adults {eligibility.minimumAge.value} and older who are in{" "}
-          {eligibility.stateName.value}.
+          Legion offers virtual visits with clinicians, for adults {eligibility.minimumAge.value} and older in{" "}
+          {eligibility.servedStates.value.join(" or ")}.
         </p>
       </div>
 
@@ -37,8 +37,8 @@ export default function StartPage() {
           ))}
         </ol>
         <p>
-          Visits are ${selfPayPrices.initialVisit.value} without insurance. With insurance, we&apos;ll estimate your cost
-          before you book.
+          Often just your copay with insurance. ${selfPayPrices.initialVisit.value} if you pay without it. We&apos;ll
+          estimate your cost before you book.
         </p>
         <p className="text-ink-muted">It takes a few minutes.</p>
       </section>
