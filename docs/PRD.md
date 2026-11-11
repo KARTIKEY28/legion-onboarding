@@ -50,7 +50,7 @@ The true goal is a completed first visit, which today's telemetry cannot see. v1
 | Guardrails | Every screened-out patient gets a next step, crisis resources always reachable, time to complete, rate of slots found taken at booking |
 | Scope | Current build: first screen to payment page, for a prospective patient in Texas, responsive web |
 | Non-goals | Post-payment build (planned for later, not this build), real insurance or identity integrations, clinical validation, a real scheduling backend |
-| Constraints | Texas only, adults, no Medicare or Medicaid, virtual only, about 107 providers, no server-side slot hold (the 10 minute countdown is browser-only) |
+| Constraints | Texas and Utah, adults, no Medicare or Medicaid, virtual only, about 107 providers, no server-side slot hold (the 10 minute countdown is browser-only). The prototype flow is scoped to a Texas patient; see docs/DECISIONS.md for what multi-state changes |
 
 ## Design principles
 

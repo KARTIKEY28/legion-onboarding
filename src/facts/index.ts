@@ -26,7 +26,13 @@ export const eligibility = {
   stateName: {
     value: "Texas",
     status: "confirmed",
-    source: "PRD constraints: Texas only",
+    // The prototype patient is in Texas; Legion itself now serves Texas and Utah (servedStates).
+    source: "Prototype scope: a Texas patient (Legion serves TX + UT)",
+  },
+  servedStates: {
+    value: ["Texas", "Utah"] as const,
+    status: "confirmed",
+    source: "Legion now serves Texas and Utah (Nov 2026)",
   },
   minimumAge: {
     value: 18,

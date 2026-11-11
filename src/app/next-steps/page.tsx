@@ -144,7 +144,7 @@ function NotifyMe({ initialEmail }: { initialEmail?: string }) {
         </p>
       </div>
       {error && (
-        <p id="notify-error" className="text-danger">
+        <p id="notify-error" className="text-caution">
           {error}
         </p>
       )}
@@ -156,7 +156,7 @@ function NotifyMe({ initialEmail }: { initialEmail?: string }) {
         onChange={(e) => setEmail(e.target.value)}
         aria-describedby={`notify-purpose${error ? " notify-error" : ""}`}
         aria-invalid={Boolean(error)}
-        className={`min-h-12 rounded-md border bg-surface px-3 text-base ${error ? "border-danger" : "border-line"}`}
+        className={`min-h-12 rounded-md border bg-surface px-3 text-base ${error ? "border-caution" : "border-line"}`}
       />
       <PrimaryButton type="submit" className="self-start">
         Email me

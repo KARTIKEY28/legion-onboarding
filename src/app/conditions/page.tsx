@@ -85,7 +85,7 @@ function ConditionsForm({ initial }: { initial: SessionAnswers["conditions"] }) 
         <fieldset className="flex flex-col gap-3" aria-describedby={error ? "conditions-error" : undefined}>
           <legend className="sr-only">Topics</legend>
           {error && (
-            <p id="conditions-error" role="alert" className="text-danger">
+            <p id="conditions-error" role="alert" className="text-caution">
               {error}
             </p>
           )}

@@ -274,7 +274,7 @@ function Field({
         </p>
       )}
       {error && (
-        <p id={`${id}-error`} className="text-danger">
+        <p id={`${id}-error`} className="text-caution">
           {error}
         </p>
       )}
@@ -287,7 +287,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         aria-describedby={describedBy || undefined}
         aria-invalid={Boolean(error)}
-        className={`min-h-11 w-full rounded-md border bg-surface px-3 text-base text-ink ${error ? "border-danger" : "border-line"}`}
+        className={`min-h-11 w-full rounded-md border bg-surface px-3 text-base text-ink ${error ? "border-caution" : "border-line"}`}
       />
     </div>
   );

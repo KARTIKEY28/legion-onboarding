@@ -3,11 +3,11 @@ import type { ComponentProps, ReactNode } from "react";
 import { JOURNEY, stepNumber, type JourneyStepId } from "@/journey";
 
 const primary =
-  "inline-flex min-h-12 items-center justify-center rounded-md bg-accent px-6 py-3 text-base font-medium text-accent-ink disabled:opacity-60";
+  "inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-6 py-3 text-base font-medium text-accent-ink hover:bg-accent-dark disabled:opacity-60";
 
-/** A secondary action: an outlined accent button (lower emphasis than the primary). */
+/** A secondary action: an outlined accent pill (lower emphasis than the primary). */
 export const secondaryClass =
-  "inline-flex min-h-11 items-center justify-center rounded-md border border-accent px-4 py-2 text-base font-medium text-accent disabled:opacity-60";
+  "inline-flex min-h-11 items-center justify-center rounded-full border border-accent px-5 py-2 text-base font-medium text-accent disabled:opacity-60";
 
 /** The one primary action on a screen. */
 export function PrimaryButton({ className = "", ...props }: ComponentProps<"button">) {
@@ -55,7 +55,7 @@ export function Progress({ step }: { step: JourneyStepId }) {
   const label = JOURNEY[current - 1].label;
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm text-ink-muted">
+      <p className="micro">
         Step {current} of {JOURNEY.length} · {label}
       </p>
       <div

@@ -197,7 +197,7 @@ function PaymentScreen() {
             <CardField id="zip" label="ZIP" value={zip} onChange={setZip} inputMode="numeric" placeholder="ZIP" disabled={busy} className="w-32" />
           </div>
           {fieldError && (
-            <p role="alert" className="text-danger">
+            <p role="alert" className="text-caution">
               {fieldError}
             </p>
           )}
@@ -256,7 +256,7 @@ function SlotTaken({ slots, onPick, clinicianName }: { slots: Slot[]; onPick: (s
 }
 
 function Banner({ tone, title, children }: { tone: "danger" | "accent"; title: string; children: React.ReactNode }) {
-  const bg = tone === "danger" ? "bg-danger-soft" : "bg-accent-soft";
+  const bg = tone === "danger" ? "bg-caution-tint" : "bg-accent-soft";
   return (
     <div role="alert" className={`flex flex-col gap-1 rounded-md ${bg} px-4 py-3`}>
       <p className="font-semibold">{title}</p>
