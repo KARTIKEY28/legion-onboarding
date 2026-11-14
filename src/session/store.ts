@@ -5,6 +5,7 @@ import type { CostSummary } from "@/ai/cost";
 import type { AvailabilityWindow, ClinicianGender, LanguageId } from "@/clinicians/model";
 import type { CoverageAnswer, Criterion, YesNo } from "@/eligibility";
 import type { TopicId } from "@/facts";
+import type { UsState } from "@/time";
 
 export type SafetyAnswer = "yes" | "no" | "rather_not_say";
 
@@ -15,6 +16,10 @@ export type SafetyAnswer = "yes" | "no" | "rather_not_say";
  */
 export interface SessionAnswers {
   inTexas?: YesNo;
+  /** The patient's served state (first-class). Drives clinician licensing and the time zone. */
+  state?: UsState;
+  /** Email left on the waitlist by a patient outside the served states. Never logged. */
+  waitlistEmail?: string;
   /** Raw fields, kept only to prefill the form. Never logged. */
   dob?: { day: string; month: string; year: string };
   coverage?: CoverageAnswer;

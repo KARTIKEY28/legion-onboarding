@@ -1,53 +1,60 @@
 /**
- * Legion schedules in Central Time, so every booked date and time is shown in
- * America/Chicago regardless of the viewer's own timezone. Using Intl with an
- * explicit timeZone keeps this deterministic across machines and in tests.
+ * Appointment times are always stored in UTC (an ISO string). They are DISPLAYED
+ * in the patient's state's primary zone, because the patient must be in that
+ * state during the visit: Texas is Central, Utah is Mountain. The zone and its
+ * abbreviation live ONLY here; no component hardcodes a zone (a test enforces it).
+ * Note (see docs/DECISIONS.md): El Paso / far-west Texas is actually Mountain, so
+ * state-based display is an approximation; production should use the address or
+ * browser zone with a confirmation.
  */
-const CENTRAL = new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/Chicago",
+export type UsState = "TX" | "UT";
+
+const ZONE: Record<UsState, { tz: string; abbrev: string }> = {
+  TX: { tz: "America/Chicago", abbrev: "CT" },
+  UT: { tz: "America/Denver", abbrev: "MT" },
+};
+
+/** The zone abbreviation for a state ("CT" / "MT"). */
+export function zoneAbbrev(state: UsState = "TX"): string {
+  return ZONE[state].abbrev;
+}
+
+function formatter(state: UsState, opts: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  return new Intl.DateTimeFormat("en-US", { timeZone: ZONE[state].tz, ...opts });
+}
+
+const DATETIME: Intl.DateTimeFormatOptions = {
   weekday: "short",
   month: "short",
   day: "numeric",
   hour: "numeric",
   minute: "2-digit",
-});
+};
 
-const CENTRAL_DAY = new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/Chicago",
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-});
-
-const CENTRAL_TIME = new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/Chicago",
-  hour: "numeric",
-  minute: "2-digit",
-});
-
-/** e.g. "Tue, Nov 10, 2:00 PM CT". Falls back to the raw value if unparseable. */
-export function formatCentral(iso: string): string {
+/** e.g. "Tue, Nov 10, 2:00 PM CT" (TX) or "... MT" (UT), in the patient's state's zone. */
+export function formatInZone(iso: string, state: UsState = "TX"): string {
   try {
-    return `${CENTRAL.format(new Date(iso))} CT`;
+    return `${formatter(state, DATETIME).format(new Date(iso))} ${ZONE[state].abbrev}`;
   } catch {
     return iso;
   }
 }
 
-/** The Central-Time calendar day, e.g. "Tue, Nov 10". Used to group availability. */
-export function centralDay(iso: string): string {
+/** The calendar day in the state's zone, e.g. "Tue, Nov 10". */
+export function dayInZone(iso: string, state: UsState = "TX"): string {
   try {
-    return CENTRAL_DAY.format(new Date(iso));
+    return formatter(state, { weekday: "short", month: "short", day: "numeric" }).format(new Date(iso));
   } catch {
     return iso;
   }
 }
 
-/** The Central-Time time of day with the zone, e.g. "2:00 PM CT". */
-export function centralTime(iso: string): string {
+/** The time of day with the zone, e.g. "2:00 PM CT" (TX) / "... MT" (UT). */
+export function timeInZone(iso: string, state: UsState = "TX"): string {
   try {
-    return `${CENTRAL_TIME.format(new Date(iso))} CT`;
+    return `${formatter(state, { hour: "numeric", minute: "2-digit" }).format(new Date(iso))} ${ZONE[state].abbrev}`;
   } catch {
     return iso;
   }
 }
+

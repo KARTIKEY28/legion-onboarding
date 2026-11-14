@@ -4,6 +4,7 @@ import { reminderCards, type VisitContext } from "./content";
 const base: VisitContext = {
   clinicianName: "Dr. Dana Whitfield",
   slotIso: "2026-11-10T20:00:00.000Z",
+  state: "TX",
   formsComplete: false,
   path: "insured",
   insuranceState: "checking",

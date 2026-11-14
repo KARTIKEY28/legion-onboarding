@@ -3,6 +3,7 @@ import { events, setModel } from "./helpers";
 
 const SEED = {
   inTexas: "yes",
+  state: "TX",
   dob: { month: "04", day: "15", year: "1990" },
   conditions: { topics: ["low_mood", "worry"], unsure: false, skipped: false },
   safety: { recentThoughts: "no" },

@@ -46,7 +46,7 @@ describe("evidence tier", () => {
 });
 
 describe("the ranking bug: low mood + weekday mornings", () => {
-  const input: MatchInput = { topics: ["low_mood"], windows: ["weekday_mornings"] };
+  const input: MatchInput = { state: "TX", topics: ["low_mood"], windows: ["weekday_mornings"] };
 
   it("ranks Dana (matches both, has a morning opening) above Marco (no morning opening)", () => {
     const full = ids(allRanked(input, NOW));
@@ -68,21 +68,21 @@ describe("the ranking bug: low mood + weekday mornings", () => {
 
 describe("hard constraints decide who can be strong", () => {
   it("a: every strong match covers a chosen concern", () => {
-    const result = matchClinicians({ topics: ["grief"], windows: [] }, NOW);
+    const result = matchClinicians({ state: "TX", topics: ["grief"], windows: [] }, NOW);
     for (const m of result.strongMatches) {
       expect(m.clinician.specialties).toContain("grief");
     }
   });
 
   it("b: every strong match has an opening in the chosen window", () => {
-    const result = matchClinicians({ topics: ["low_mood"], windows: ["weekday_mornings"] }, NOW);
+    const result = matchClinicians({ state: "TX", topics: ["low_mood"], windows: ["weekday_mornings"] }, NOW);
     for (const m of result.strongMatches) {
       expect(openSlots(m.clinician, NOW, ["weekday_mornings"]).length).toBeGreaterThan(0);
     }
   });
 
   it("c: every strong match accepts the chosen plan", () => {
-    const result = matchClinicians({ topics: ["low_mood"], windows: [], payerId: "sample_insurance" }, NOW);
+    const result = matchClinicians({ state: "TX", topics: ["low_mood"], windows: [], payerId: "sample_insurance" }, NOW);
     expect(result.strongMatches.length).toBeGreaterThan(0);
     for (const m of result.strongMatches) {
       expect(m.clinician.acceptedPayers).toContain("sample_insurance");
@@ -90,7 +90,7 @@ describe("hard constraints decide who can be strong", () => {
   });
 
   it("d: every strong match speaks the chosen language", () => {
-    const result = matchClinicians({ topics: ["low_mood"], windows: [], language: "es" }, NOW);
+    const result = matchClinicians({ state: "TX", topics: ["low_mood"], windows: [], language: "es" }, NOW);
     expect(result.strongMatches.length).toBeGreaterThan(0);
     for (const m of result.strongMatches) {
       expect(m.clinician.languages).toContain("es");
@@ -98,14 +98,14 @@ describe("hard constraints decide who can be strong", () => {
   });
 
   it("a fully booked clinician is never a strong match", () => {
-    expect(passesHardConstraints(clinician("c7"), { topics: ["eating"], windows: [] }, NOW)).toBe(false);
+    expect(passesHardConstraints(clinician("c7"), { state: "TX", topics: ["eating"], windows: [] }, NOW)).toBe(false);
   });
 });
 
 describe("no-strong-match state fires only at zero strong matches", () => {
   it("shows matches (not the no-match state) when one or two clinicians are strong", () => {
     // grief + weekday mornings: only Dana and Elena are strong (two), so it is not a no-match state.
-    const result = matchClinicians({ topics: ["grief"], windows: ["weekday_mornings"] }, NOW);
+    const result = matchClinicians({ state: "TX", topics: ["grief"], windows: ["weekday_mornings"] }, NOW);
     expect(result.strongMatches.length).toBe(2);
     expect(result.noStrongMatch).toBe(false);
     expect(result.alsoAvailable.length).toBe(1); // filled to three, labeled honestly
@@ -114,7 +114,7 @@ describe("no-strong-match state fires only at zero strong matches", () => {
 
   it("falls to the no-strong-match state only when nobody is strong", () => {
     // low mood + weekends: no low-mood clinician works weekends (weekends are thin by design).
-    const result = matchClinicians({ topics: ["low_mood"], windows: ["weekends"] }, NOW);
+    const result = matchClinicians({ state: "TX", topics: ["low_mood"], windows: ["weekends"] }, NOW);
     expect(result.noStrongMatch).toBe(true);
     expect(result.strongMatches).toHaveLength(0);
     expect(result.closest.length).toBeGreaterThan(0);
@@ -124,12 +124,12 @@ describe("no-strong-match state fires only at zero strong matches", () => {
 describe("soft score orders strong matches", () => {
   it("ranks a clinician who covers more concerns higher", () => {
     // c1 covers both low_mood and worry; c3 covers only worry.
-    const full = ids(allRanked({ topics: ["low_mood", "worry"], windows: [] }, NOW));
+    const full = ids(allRanked({ state: "TX", topics: ["low_mood", "worry"], windows: [] }, NOW));
     expect(full.indexOf("c1")).toBeLessThan(full.indexOf("c3"));
   });
 
   it("is deterministic", () => {
-    const input: MatchInput = { topics: ["low_mood", "worry"], windows: [] };
+    const input: MatchInput = { state: "TX", topics: ["low_mood", "worry"], windows: [] };
     expect(ids(matchClinicians(input, NOW).strongMatches)).toEqual(ids(matchClinicians(input, NOW).strongMatches));
   });
 });
@@ -145,9 +145,30 @@ describe("distinct schedules", () => {
   });
 });
 
+describe("state licensing is a hard constraint", () => {
+  it("a Utah patient never sees a Texas-only clinician, in any list", () => {
+    const utInput: MatchInput = { state: "UT", topics: [], windows: [] };
+    const result = matchClinicians(utInput, NOW);
+    const shown = [...result.strongMatches, ...result.alsoAvailable, ...result.closest, ...allRanked(utInput, NOW)];
+    for (const m of shown) {
+      expect(m.clinician.licensedStates, `${m.clinician.id} shown to a Utah patient`).toContain("UT");
+    }
+    // And the Texas-only roster really is excluded: at least one TX-only clinician exists.
+    const txOnly = CLINICIANS.filter((c) => !c.licensedStates.includes("UT"));
+    expect(txOnly.length).toBeGreaterThan(0);
+    const shownIds = new Set(shown.map((m) => m.clinician.id));
+    for (const c of txOnly) expect(shownIds.has(c.id), `${c.id} is TX-only`).toBe(false);
+  });
+
+  it("a Utah patient still gets real matches (the Utah roster is reachable)", () => {
+    const result = matchClinicians({ state: "UT", topics: ["low_mood"], windows: [] }, NOW);
+    expect(result.strongMatches.length).toBeGreaterThan(0);
+  });
+});
+
 describe("widen gains", () => {
   it("counts how many more clinicians dropping the time window would add", () => {
-    const input: MatchInput = { topics: ["low_mood"], windows: ["weekends"] };
+    const input: MatchInput = { state: "TX", topics: ["low_mood"], windows: ["weekends"] };
     const gains = widenGains(input, NOW);
     expect(gains.any_time).toBeGreaterThan(0);
   });

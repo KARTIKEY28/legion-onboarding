@@ -4,6 +4,7 @@
  * Illustrative data will be added in slice 5 and labeled as such.
  */
 import type { TopicId } from "@/facts";
+import type { UsState } from "@/time";
 
 export const AVAILABILITY_WINDOWS = [
   { id: "weekday_mornings", label: "Weekday mornings" },
@@ -39,6 +40,8 @@ export interface Clinician {
   credential: string;
   /** The role, as an id, for the role explainer. */
   role: ClinicianRole;
+  /** States the clinician is licensed in. A patient only matches clinicians licensed in their state. */
+  licensedStates: UsState[];
   photoUrl?: string;
   /** Declared fit (evidence tier 1): topics the clinician says they focus on. */
   specialties: TopicId[];

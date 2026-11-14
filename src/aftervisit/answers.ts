@@ -54,6 +54,7 @@ export function visitContext(a: SessionAnswers, demo: typeof DEMO_DEFAULTS): Vis
   return {
     clinicianName: a.selectedClinician.name,
     slotIso: a.selectedSlot.iso,
+    state: a.state ?? "TX",
     formsComplete: demo.formsComplete,
     path: a.insurance?.path ?? "not_sure",
     insuranceState: demo.insuranceState,

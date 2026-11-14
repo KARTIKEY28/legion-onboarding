@@ -1,6 +1,6 @@
 import { estimateLine, type CostEstimate } from "@/data/estimate";
 import { freeToRescheduleLine } from "@/payment/summary";
-import { formatCentral } from "@/time";
+import { formatInZone, type UsState } from "@/time";
 
 /**
  * Content for the after-payment screens. All logistics, warm and plain, no
@@ -10,6 +10,8 @@ import { formatCentral } from "@/time";
 export interface VisitContext {
   clinicianName: string;
   slotIso: string;
+  /** The patient's state, so times render in their own time zone. */
+  state: UsState;
   formsComplete: boolean;
   path: "insured" | "self_pay" | "not_sure";
   insuranceState: "checking" | "confirmed" | "more_info";
@@ -73,7 +75,7 @@ function insuranceLine(ctx: VisitContext): string | null {
 }
 
 export function reminderCards(ctx: VisitContext): ReminderCard[] {
-  const when = formatCentral(ctx.slotIso);
+  const when = formatInZone(ctx.slotIso, ctx.state);
   const rescheduleLink = "Reschedule or cancel: [open your visit]";
 
   const card = (lead: string, leadLine: string): ReminderCard => {
@@ -92,7 +94,7 @@ export function reminderCards(ctx: VisitContext): ReminderCard[] {
 
   return [
     // The 48-hour reminder leads with the free-to-reschedule cutoff.
-    card("48 hours", freeToRescheduleLine(ctx.slotIso)),
+    card("48 hours", freeToRescheduleLine(ctx.slotIso, ctx.state)),
     card("24 hours", `Your visit is 24 hours away. Here's everything you need.`),
     card("1 hour", `Your visit is 1 hour away. Find a quiet, private spot and your join link.`),
   ];
@@ -108,7 +110,7 @@ export interface EmailPreview {
 
 /** One general logistics email, and one condition-specific one. Illustrative, no medical advice. */
 export function previsitEmails(ctx: VisitContext, conditionLabel?: string): EmailPreview[] {
-  const when = formatCentral(ctx.slotIso);
+  const when = formatInZone(ctx.slotIso, ctx.state);
   const general: EmailPreview = {
     kind: "general",
     subject: "Getting ready for your visit",

@@ -1,5 +1,5 @@
 import { cancellation, cardTerms, selfPayPrices } from "@/facts";
-import { formatCentral } from "@/time";
+import { formatInZone, type UsState } from "@/time";
 
 /**
  * One-line booking-summary helpers. Every amount comes from src/facts/terms.ts,
@@ -26,20 +26,20 @@ export function cardHoldLine(): string {
   return `We'll place a $${cardTerms.authorizationAmount.value} hold to check your card, then release it. You're charged about ${cardTerms.chargeDaysAfterVisit.value} days after your visit.`;
 }
 
-/** The free-change cutoff: the visit time minus the cancellation window, in Central Time. */
-export function cancellationCutoff(slotIso: string): string {
+/** The free-change cutoff: the visit time minus the cancellation window, in the patient's zone. */
+export function cancellationCutoff(slotIso: string, state: UsState = "TX"): string {
   const cutoff = new Date(new Date(slotIso).getTime() - cancellation.windowHours.value * 60 * 60 * 1000);
-  return formatCentral(cutoff.toISOString());
+  return formatInZone(cutoff.toISOString(), state);
 }
 
 /** "Free to change until [cutoff]. After that, cancelling may cost the cancellation fee." */
-export function freeToChangeLine(slotIso: string): string {
-  return `Free to change until ${cancellationCutoff(slotIso)}. After that, cancelling may cost $${cancellation.followUpFee.value}.`;
+export function freeToChangeLine(slotIso: string, state: UsState = "TX"): string {
+  return `Free to change until ${cancellationCutoff(slotIso, state)}. After that, cancelling may cost $${cancellation.followUpFee.value}.`;
 }
 
 /** The reminder variant: "Free to reschedule until [cutoff]. After that, cancelling may cost [fee]." */
-export function freeToRescheduleLine(slotIso: string): string {
-  return `Free to reschedule until ${cancellationCutoff(slotIso)}. After that, cancelling may cost $${cancellation.followUpFee.value}.`;
+export function freeToRescheduleLine(slotIso: string, state: UsState = "TX"): string {
+  return `Free to reschedule until ${cancellationCutoff(slotIso, state)}. After that, cancelling may cost $${cancellation.followUpFee.value}.`;
 }
 
 /** True when the visit is less than the cancellation window (48 hours) from now. */
@@ -58,8 +58,8 @@ export function under48Line(): string {
  * under-48-hours warning (never a free-to-change time that has already passed);
  * otherwise the free-to-change cutoff.
  */
-export function changeTermsLine(slotIso: string, now: Date = new Date()): string {
-  return isWithinCancellationWindow(slotIso, now) ? under48Line() : freeToChangeLine(slotIso);
+export function changeTermsLine(slotIso: string, state: UsState = "TX", now: Date = new Date()): string {
+  return isWithinCancellationWindow(slotIso, now) ? under48Line() : freeToChangeLine(slotIso, state);
 }
 
 /** The on-file card line for the confirmation; insured adds a coverage line. */

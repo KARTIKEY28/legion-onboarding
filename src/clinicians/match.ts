@@ -12,6 +12,7 @@ import {
 } from "./model";
 import { AVAILABILITY_WINDOWS } from "./model";
 import { nextSlots, openSlots, type Slot } from "./schedule";
+import type { UsState } from "@/time";
 
 /**
  * Deterministic matching, in code (never by the model). Matching is split in
@@ -31,6 +32,8 @@ import { nextSlots, openSlots, type Slot } from "./schedule";
  */
 
 export interface MatchInput {
+  /** The patient's state. A clinician must be licensed here to appear at all. */
+  state: UsState;
   topics: TopicId[];
   windows: AvailabilityWindow[];
   language?: LanguageId;
@@ -112,6 +115,8 @@ export function facts(c: Clinician, input: MatchInput): MatchReasonFacts {
 
 /** The hard constraints the patient actually set. Passing all of them = a strong match. */
 export function passesHardConstraints(c: Clinician, input: MatchInput, now: Date): boolean {
+  // Licensing: the clinician must be licensed in the patient's state.
+  if (!c.licensedStates.includes(input.state)) return false;
   // Baseline: some opening at all in the next 14 days.
   if (!openSlots(c, now).length) return false;
   // a. concern overlap, when concerns were chosen.
@@ -125,8 +130,9 @@ export function passesHardConstraints(c: Clinician, input: MatchInput, now: Date
   return true;
 }
 
-/** True when the clinician could appear at all: Texas (implicit), plan and language. */
+/** True when the clinician could appear at all: licensed in the patient's state, plan and language. */
 function eligible(c: Clinician, input: MatchInput, now: Date): boolean {
+  if (!c.licensedStates.includes(input.state)) return false;
   if (!openSlots(c, now).length) return false;
   if (input.payerId && !c.acceptedPayers.includes(input.payerId)) return false;
   if (input.language && !c.languages.includes(input.language)) return false;
@@ -223,6 +229,7 @@ export function widenGains(input: MatchInput, now: Date): { any_time?: number; a
 
 /** Builds the MatchInput from the patient's saved answers. */
 export function matchInputFromAnswers(a: {
+  state?: UsState;
   conditions?: { topics: TopicId[] };
   needs?: { availability: AvailabilityWindow[]; language?: LanguageId; gender?: ClinicianGender };
   insurance?: { path: string; payerId?: string };
@@ -234,6 +241,7 @@ export function matchInputFromAnswers(a: {
   // Time of day is no longer a hard constraint at match time (it moved to a chip
   // filter on the Match page), so windows are always empty here.
   return {
+    state: a.state ?? "TX",
     topics: a.conditions?.topics ?? [],
     windows: [],
     language: a.needs?.language,

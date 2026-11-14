@@ -12,19 +12,27 @@ const genderIds = new Set<string>(CLINICIAN_GENDERS.map((g) => g.id));
 const payerIds = new Set<string>(samplePayers.value.map((p) => p.id));
 
 describe("synthetic clinicians", () => {
-  it("has 12 clinicians with unique ids", () => {
-    expect(CLINICIANS).toHaveLength(12);
-    expect(new Set(CLINICIANS.map((c) => c.id)).size).toBe(12);
+  it("has 15 clinicians with unique ids", () => {
+    expect(CLINICIANS).toHaveLength(15);
+    expect(new Set(CLINICIANS.map((c) => c.id)).size).toBe(15);
   });
 
-  it("only uses valid specialties, availability, languages, gender and payers", () => {
+  it("only uses valid specialties, availability, languages, gender, payers and licensed states", () => {
+    const stateIds = new Set<string>(["TX", "UT"]);
     for (const c of CLINICIANS) {
       expect(c.specialties.every((s) => topicIds.has(s)), `${c.id} specialties`).toBe(true);
       expect(c.availability.every((w) => windowIds.has(w)), `${c.id} availability`).toBe(true);
       expect(c.languages.every((l) => langIds.has(l)), `${c.id} languages`).toBe(true);
       expect(genderIds.has(c.gender), `${c.id} gender`).toBe(true);
       expect(c.acceptedPayers.every((p) => payerIds.has(p)), `${c.id} payers`).toBe(true);
+      // Every clinician must be licensed in at least one served state.
+      expect(c.licensedStates.length, `${c.id} licensedStates`).toBeGreaterThan(0);
+      expect(c.licensedStates.every((s) => stateIds.has(s)), `${c.id} licensedStates`).toBe(true);
     }
+  });
+
+  it("has at least three clinicians licensed in Utah", () => {
+    expect(CLINICIANS.filter((c) => c.licensedStates.includes("UT")).length).toBeGreaterThanOrEqual(3);
   });
 
   it("labels every experience and outcome figure as illustrative", () => {

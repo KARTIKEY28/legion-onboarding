@@ -6,9 +6,11 @@ import { visitContext } from "@/aftervisit/answers";
 import { AfterVisitScreen, useDemo } from "@/components/aftervisit";
 import { LoadingScreen, secondaryClass } from "@/components/ui";
 import { useAnswers } from "@/session/store";
-import { formatCentral } from "@/time";
+import { formatInZone, type UsState } from "@/time";
 
 const CHECKS = ["Camera", "Microphone", "Connection"] as const;
+
+const STATE_NAME: Record<UsState, string> = { TX: "Texas", UT: "Utah" };
 
 export default function DayOfVisitPage() {
   const answers = useAnswers();
@@ -17,17 +19,18 @@ export default function DayOfVisitPage() {
   const ctx = visitContext(answers, demo);
   const canJoin = demo.clock === "visit"; // enabled only from 10 minutes before the visit
   const slotIso = answers.selectedSlot?.iso;
+  const state = answers.state ?? "TX";
   return (
     <AfterVisitScreen stepId="day">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">Day of your visit</h1>
         <p className="text-ink-muted">
-          {ctx ? `Your visit with ${ctx.clinicianName} is ${formatCentral(ctx.slotIso)}.` : "Your visit is coming up."}
+          {ctx ? `Your visit with ${ctx.clinicianName} is ${formatInZone(ctx.slotIso, ctx.state)}.` : "Your visit is coming up."}
         </p>
       </div>
       <DeviceCheck problem={demo.deviceProblem} />
-      <BeforeYouJoin />
-      <JoinVisit canJoin={canJoin} slotIso={slotIso} />
+      <BeforeYouJoin state={state} />
+      <JoinVisit canJoin={canJoin} slotIso={slotIso} state={state} />
     </AfterVisitScreen>
   );
 }
@@ -77,7 +80,7 @@ function DeviceCheck({ problem }: { problem: boolean }) {
   );
 }
 
-function BeforeYouJoin() {
+function BeforeYouJoin({ state }: { state: UsState }) {
   return (
     <section aria-label="Before you join" className="flex flex-col gap-3 rounded-lg bg-surface p-4">
       <h2 className="text-lg font-semibold">Before you join</h2>
@@ -92,7 +95,7 @@ function BeforeYouJoin() {
           <span aria-hidden className="text-accent">
             ·
           </span>
-          <span>You need to be in Texas during your visit.</span>
+          <span>You need to be in {STATE_NAME[state]} during your visit.</span>
         </li>
         <li className="flex gap-2">
           <span aria-hidden className="text-accent">
@@ -106,7 +109,7 @@ function BeforeYouJoin() {
   );
 }
 
-function JoinVisit({ canJoin, slotIso }: { canJoin: boolean; slotIso?: string }) {
+function JoinVisit({ canJoin, slotIso, state }: { canJoin: boolean; slotIso?: string; state: UsState }) {
   const [joined, setJoined] = useState(false);
   function join() {
     setJoined(true);
@@ -127,7 +130,7 @@ function JoinVisit({ canJoin, slotIso }: { canJoin: boolean; slotIso?: string })
         </button>
       ) : (
         <p className="text-ink-muted">
-          You can join from 10 minutes before. Your visit opens at {slotIso ? formatCentral(slotIso) : "your visit time"}.
+          You can join from 10 minutes before. Your visit opens at {slotIso ? formatInZone(slotIso, state) : "your visit time"}.
         </p>
       )}
     </section>

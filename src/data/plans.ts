@@ -29,6 +29,8 @@ export const PLANS: Record<string, PlanEligibility> = {
   placeholder_health: { psychiatryCovered: true, copay: 45, deductibleRemaining: 0, coinsurance: null },
   // Psychiatry not covered under this plan.
   demo_care: { psychiatryCovered: false, copay: null, deductibleRemaining: null, coinsurance: null },
+  // Utah payer: a copay plan.
+  mountain_health: { psychiatryCovered: true, copay: 35, deductibleRemaining: 0, coinsurance: null },
 };
 
 export type EligibilityResult = "copay" | "deductible" | "not_covered" | "failed" | "self_pay";

@@ -11,7 +11,7 @@ import { ActionBar, LoadingScreen, PrimaryLink, Progress, Screen, TextLink, barP
 import { VisitSummary } from "@/components/VisitSummary";
 import { estimateFromAnswers, estimateLine } from "@/data/estimate";
 import { changeTermsLine } from "@/payment/summary";
-import { formatCentral } from "@/time";
+import { formatInZone, type UsState } from "@/time";
 import { getAnswers, updateAnswers, useAnswers } from "@/session/store";
 
 const CLIENT_TIMEOUT_MS = 3000;
@@ -46,7 +46,7 @@ export default function CostPage() {
   // "What you pay" is the pre-payment cost estimate (A1).
   const payLines = [estimateLine(estimateFromAnswers(answers))];
   const slotIso = answers.selectedSlot?.iso;
-  const changeLine = slotIso ? changeTermsLine(slotIso) : undefined;
+  const changeLine = slotIso ? changeTermsLine(slotIso, answers.state ?? "TX") : undefined;
 
   // One reason line for the visit card, built from the same facts as the match.
   const selected = answers.selectedClinician;
@@ -63,6 +63,7 @@ export default function CostPage() {
       reason={reason}
       slotIso={slotIso}
       changeLine={changeLine}
+      state={answers.state ?? "TX"}
     />
   );
 }
@@ -81,6 +82,7 @@ function ChosenVisit({
   reason,
   slotIso,
   changeLine,
+  state,
 }: {
   clinicianId?: string;
   clinician: string;
@@ -88,6 +90,7 @@ function ChosenVisit({
   reason?: string;
   slotIso?: string;
   changeLine?: string;
+  state: UsState;
 }) {
   return (
     <VisitSummary
@@ -106,7 +109,7 @@ function ChosenVisit({
       {reason && <p className="text-sm">{reason}</p>}
       <p className="text-sm text-ink-muted">Video visit</p>
       {/* Visit length is unknown (see docs/DECISIONS.md), so it is not shown. */}
-      {slotIso && <p className="text-base">{formatCentral(slotIso)}</p>}
+      {slotIso && <p className="text-base">{formatInZone(slotIso, state)}</p>}
       <TextLink href="/match" className="self-start text-sm">
         Change
       </TextLink>
@@ -123,6 +126,7 @@ function CostScreen({
   reason,
   slotIso,
   changeLine,
+  state,
 }: {
   path: CostPath;
   payLines: string[];
@@ -132,6 +136,7 @@ function CostScreen({
   reason?: string;
   slotIso?: string;
   changeLine?: string;
+  state: UsState;
 }) {
   const [summary, setSummary] = useState<CostSummary | null>(() => getAnswers().costSummaries?.[path] ?? null);
   useTrackOnce("cost.viewed", "cost.viewed", () => ({ insurance_path: path }));
@@ -169,7 +174,7 @@ function CostScreen({
       </div>
 
       {clinician && (
-        <ChosenVisit clinicianId={clinicianId} clinician={clinician} role={role} reason={reason} slotIso={slotIso} changeLine={changeLine} />
+        <ChosenVisit clinicianId={clinicianId} clinician={clinician} role={role} reason={reason} slotIso={slotIso} changeLine={changeLine} state={state} />
       )}
 
       <div className="flex flex-col gap-4">

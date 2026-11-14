@@ -9,14 +9,14 @@ import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, barPrimary }
 import {
   checkAge,
   checkCoverage,
-  checkTexas,
+  checkLocation,
   dobProblem,
   parseDob,
   type CheckResult,
   type CoverageAnswer,
   type Criterion,
   type DateOfBirth,
-  type YesNo,
+  type LocationAnswer,
 } from "@/eligibility";
 import { eligibility } from "@/facts";
 import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
@@ -50,7 +50,9 @@ export default function AboutPage() {
 function AboutForm({ initial }: { initial: SessionAnswers }) {
   const router = useRouter();
   const today = useRef(new Date()).current;
-  const [inTexas, setInTexas] = useState<YesNo | undefined>(initial.inTexas);
+  const [location, setLocation] = useState<LocationAnswer | undefined>(
+    initial.state ?? (initial.inTexas === "yes" ? "TX" : undefined),
+  );
   const [dob, setDob] = useState<string>(initial.dob ? maskedFromFields(initial.dob) : "");
   const [coverage, setCoverage] = useState<CoverageAnswer | undefined>(initial.coverage);
   const [dobTouched, setDobTouched] = useState(Boolean(initial.dob));
@@ -61,9 +63,9 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
   const dobValid = typeof dobResult !== "string";
   const ageResult = dobValid ? checkAge(dobResult, today) : undefined;
 
-  function chooseTexas(value: YesNo) {
-    setInTexas(value);
-    recordCheck("texas", checkTexas(value));
+  function chooseLocation(value: LocationAnswer) {
+    setLocation(value);
+    recordCheck("texas", checkLocation(value));
   }
 
   function changeDob(value: string) {
@@ -78,7 +80,7 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
   }
 
   const errors = {
-    texas: inTexas ? undefined : "Please choose yes or no so we know whether Legion can see you.",
+    texas: location ? undefined : "Please choose where you'll be so we know whether Legion can see you.",
     dob: dobValid ? undefined : DOB_MESSAGES[dobResult as keyof typeof DOB_MESSAGES],
     coverage: coverage ? undefined : "Please choose an answer. Not sure is fine.",
   };
@@ -96,12 +98,14 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
       return;
     }
     const exclusions: Criterion[] = [];
-    if (checkTexas(inTexas!) === "fail") exclusions.push("texas");
+    if (checkLocation(location!) === "fail") exclusions.push("texas");
     if (ageResult === "fail") exclusions.push("age");
     if (checkCoverage(coverage!) === "fail") exclusions.push("coverage");
 
+    const served = location === "TX" || location === "UT";
     updateAnswers({
-      inTexas,
+      state: served ? location : undefined,
+      inTexas: location === "TX" ? "yes" : location === "other" ? "no" : undefined,
       dob: splitMaskedDob(dob),
       coverage,
       confirmCoverageAtInsurance: coverage === "unsure",
@@ -139,20 +143,21 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
       <form noValidate onSubmit={submit} className="flex flex-col gap-8">
         <RadioQuestion
           id="texas"
-          legend={`Will you be in ${eligibility.stateName.value} for your visits?`}
-          reason={`Legion's clinicians can only see patients who are in ${eligibility.stateName.value} during their visits.`}
+          legend="Where will you be for your visits?"
+          reason="You need to be in the state your clinician is licensed in during each visit, so this sets who can see you."
           options={[
-            { value: "yes", label: "Yes" },
-            { value: "no", label: "No" },
+            { value: "TX", label: "Texas" },
+            { value: "UT", label: "Utah" },
+            { value: "other", label: "Not in Texas or Utah" },
           ]}
-          value={inTexas}
-          onChange={chooseTexas}
+          value={location}
+          onChange={chooseLocation}
           error={shown.texas}
           note={
-            inTexas === "no" && (
+            location === "other" && (
               <ExclusionNote>
-                Legion can only see you while you&apos;re in {eligibility.stateName.value}. When you continue,
-                we&apos;ll show you what you can do instead.
+                Legion sees patients in {eligibility.servedStates.value.join(" and ")} right now. When you continue,
+                we&apos;ll offer to let you know when we reach your state.
               </ExclusionNote>
             )
           }

@@ -13,7 +13,7 @@ import { scenarioForCard, TEST_CARDS, maskCard } from "@/payment/cards";
 import type { BookingResult, PaymentScenario } from "@/payment/booking";
 import { cancellationLine, cardHoldLine } from "@/payment/summary";
 import { getAnswers, updateAnswers, useAnswers } from "@/session/store";
-import { formatCentral } from "@/time";
+import { formatInZone, type UsState } from "@/time";
 import { slotTakenArmed } from "@/devtoggles";
 
 type Status = "idle" | "processing" | "auth" | "declined" | "error" | "slot_taken";
@@ -52,6 +52,7 @@ function PaymentScreen() {
 
   const clinician = getAnswers().selectedClinician!;
   const slot = getAnswers().selectedSlot!;
+  const state = getAnswers().state ?? "TX";
 
   function digitsOk() {
     if (card.replace(/\D/g, "").length < 15) return "Please enter a full card number.";
@@ -141,7 +142,7 @@ function PaymentScreen() {
       {/* Booking summary */}
       <VisitSummary label="Booking summary" clinicianId={clinician.id} clinicianName={clinician.name}>
         <p data-testid="booking-when" className="text-base">
-          {formatCentral(slot.iso)}
+          {formatInZone(slot.iso, state)}
         </p>
         <p className="text-base">{estimateLine(estimateFromAnswers(getAnswers()))}</p>
         <p className="text-sm text-ink-muted">{cancellationLine()}</p>
@@ -156,7 +157,7 @@ function PaymentScreen() {
       </VisitSummary>
 
       {status === "slot_taken" ? (
-        <SlotTaken slots={takenSlots ?? []} onPick={pickNewTime} clinicianName={clinician.name} />
+        <SlotTaken slots={takenSlots ?? []} onPick={pickNewTime} clinicianName={clinician.name} state={state} />
       ) : (
         <form
           className="flex flex-col gap-4"
@@ -224,7 +225,7 @@ function PaymentScreen() {
   );
 }
 
-function SlotTaken({ slots, onPick, clinicianName }: { slots: Slot[]; onPick: (s: Slot) => void; clinicianName: string }) {
+function SlotTaken({ slots, onPick, clinicianName, state }: { slots: Slot[]; onPick: (s: Slot) => void; clinicianName: string; state: UsState }) {
   return (
     <section aria-label="That time was just taken" className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
       <h2 className="text-lg font-semibold">That time was just taken</h2>
@@ -241,7 +242,7 @@ function SlotTaken({ slots, onPick, clinicianName }: { slots: Slot[]; onPick: (s
               onClick={() => onPick(s)}
               className="min-h-11 rounded-md border border-line bg-canvas px-4 py-2 text-left text-base"
             >
-              {formatCentral(s.iso)}
+              {formatInZone(s.iso, state)}
             </button>
           ))
         ) : (

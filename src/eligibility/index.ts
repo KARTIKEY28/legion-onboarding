@@ -9,6 +9,14 @@ import { eligibility } from "@/facts";
 export type Criterion = "texas" | "age" | "coverage";
 export type CheckResult = "pass" | "fail" | "unconfirmed";
 
+/** The location answer on About you: a served state, or somewhere Legion can't see the patient. */
+export type LocationAnswer = "TX" | "UT" | "other";
+
+/** Legion serves Texas and Utah; anywhere else is a (warm) exclusion. */
+export function checkLocation(value: LocationAnswer): CheckResult {
+  return value === "other" ? "fail" : "pass";
+}
+
 export type YesNo = "yes" | "no";
 export type CoverageAnswer = "yes" | "no" | "unsure";
 

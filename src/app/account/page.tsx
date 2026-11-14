@@ -6,7 +6,7 @@ import { trackOnce, useTrackOnce } from "@/analytics/hooks";
 import { maskedFromFields } from "@/components/form";
 import { VisitSummary } from "@/components/VisitSummary";
 import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, TextLink, barPrimary, secondaryClass } from "@/components/ui";
-import { formatCentral } from "@/time";
+import { formatInZone } from "@/time";
 import { getAnswers, updateAnswers, useAnswers } from "@/session/store";
 
 /**
@@ -138,7 +138,7 @@ function AccountForm() {
           clinicianId={saved.selectedClinician.id}
           clinicianName={saved.selectedClinician.name}
         >
-          {saved.selectedSlot && <p className="text-base">{formatCentral(saved.selectedSlot.iso)}</p>}
+          {saved.selectedSlot && <p className="text-base">{formatInZone(saved.selectedSlot.iso, saved.state ?? "TX")}</p>}
         </VisitSummary>
       )}
 
