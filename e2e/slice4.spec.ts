@@ -130,6 +130,35 @@ test("flagged Medicare path: 'still not sure' continues", async ({ page }) => {
   await expect(page.getByText("Step 6 of 10 · Needs")).toBeVisible();
 });
 
+test("late exclusion: discovery returns a Medicaid plan after the patient answered No", async ({ page }) => {
+  // ELIGIBLE answered "No" to Medicare/Medicaid on About you.
+  await toInsurance(page);
+  await page.getByLabel("I have insurance", { exact: true }).check();
+  await page.getByLabel("Plan or insurer", { exact: true }).selectOption({ label: "Sample Medicaid Plan" });
+  await page.getByLabel("Member ID").fill("SYN-MEMBER-778899");
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  // The simulated coverage discovery runs, then lands on the late-exclusion screen.
+  await expect(page.getByText("Checking your coverage")).toBeVisible();
+  await expect(page).toHaveURL(/\/next-steps$/);
+
+  // It names the plan, says it is a Medicaid plan, and acknowledges the late, contradicting catch.
+  await expect(page.getByRole("heading", { name: /Sample Medicaid Plan looks like a Medicaid plan/ })).toBeVisible();
+  await expect(page.getByText(/Earlier you said you don't have Medicare or Medicaid/)).toBeVisible();
+  await expect(page.getByText(/Sample Medicaid Plan came back, and that's a Medicaid plan/)).toBeVisible();
+
+  // A real next step: the waitlist email and crisis resources are offered.
+  await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Crisis help" })).toBeVisible();
+
+  // No plan name or member id ever reaches an event.
+  const fired = await events(page);
+  const serialized = JSON.stringify(fired.map(({ event, step, properties }) => ({ event, step, properties })));
+  for (const forbidden of ["Sample Medicaid", "SYN-MEMBER", "778899", "medicaid"]) {
+    expect(serialized, `events must not contain "${forbidden}"`).not.toContain(forbidden);
+  }
+});
+
 test("a summary with an invented price is rejected and the template is shown", async ({ page }) => {
   await setModel(page, "invalid");
   await toInsurance(page);

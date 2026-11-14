@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { reminderEstimate } from "@/facts";
 import { reminderCards, type VisitContext } from "./content";
 
 const base: VisitContext = {
@@ -50,5 +51,32 @@ describe("reminder cards", () => {
     for (const body of joined(base)) {
       expect(body).toContain("Reschedule or cancel");
     }
+  });
+
+  describe("48-hour cost confirmation variants", () => {
+    const estimated = reminderEstimate.estimated.value;
+    const confirmed = reminderEstimate.confirmed.value;
+
+    it("'confirmed' closes the loop: the 48-hour email says the cost held", () => {
+      const body = reminderCards({ ...base, costOutcome: "confirmed" })[0].email.body.join(" ");
+      expect(body).toContain(`cost is confirmed at $${estimated} per visit`);
+      // Only the 48-hour reminder changes; the later two keep the estimate.
+      const later = reminderCards({ ...base, costOutcome: "confirmed" }).slice(1).map((c) => c.email.body.join(" "));
+      for (const b of later) expect(b).not.toContain("cost is confirmed at");
+    });
+
+    it("'changed' names the new and old amount with a reason and a link", () => {
+      const body = reminderCards({ ...base, costOutcome: "changed" })[0].email.body.join(" ");
+      expect(body).toContain(`Your confirmed cost is $${confirmed}, not the $${estimated} we estimated.`);
+      expect(body).toMatch(/\[See why\]/);
+    });
+
+    it("keeps every text message under 160 characters, including the cost variants", () => {
+      for (const outcome of ["estimated", "confirmed", "changed"] as const) {
+        for (const card of reminderCards({ ...base, costOutcome: outcome })) {
+          expect(card.sms.length, `${outcome} / ${card.lead}`).toBeLessThan(160);
+        }
+      }
+    });
   });
 });

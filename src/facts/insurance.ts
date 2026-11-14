@@ -14,6 +14,9 @@ export const samplePayers = {
     { id: "demo_care", label: "Demo Care Network", states: ["TX"] },
     { id: "placeholder_health", label: "Placeholder Health", states: ["TX"] },
     { id: "mountain_health", label: "Mountain Health", states: ["UT"] },
+    // A government program, so that coverage discovery can surface a Medicaid
+    // plan Legion cannot accept (the late-exclusion path). Offered in both states.
+    { id: "sample_medicaid", label: "Sample Medicaid Plan", states: ["TX", "UT"] },
   ],
   status: "assumption",
   source: "Synthetic placeholder list for the prototype. Not real insurers.",

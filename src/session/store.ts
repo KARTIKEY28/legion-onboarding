@@ -58,6 +58,12 @@ export interface SessionAnswers {
   };
   /** The answer when "not sure" about Medicare or Medicaid was asked again on Insurance. */
   coverageAtInsurance?: "yes" | "no" | "unsure";
+  /**
+   * Set when coverage discovery at Insurance surfaced a government plan Legion
+   * can't accept. `contradicted` is true when the patient had answered "No" to
+   * Medicare/Medicaid earlier, so the exclusion screen acknowledges it.
+   */
+  lateDiscovery?: { planLabel: string; program: "medicaid" | "medicare"; contradicted: boolean };
   /** The simulated eligibility/cost result from the Insurance step (synthetic, from plans.ts). */
   eligibilityCost?: { result: "copay" | "deductible" | "not_covered" | "failed" | "self_pay"; payerId?: string };
   /** The clinician the patient picked on Match. */
@@ -80,6 +86,8 @@ export interface SessionAnswers {
   demo?: {
     clock?: "far" | "48h" | "24h" | "1h" | "visit";
     insuranceState?: "checking" | "confirmed" | "more_info";
+    /** Which cost-confirmation variant the 48-hour reminder shows. */
+    costOutcome?: "estimated" | "confirmed" | "changed";
     formsComplete?: boolean;
     visitComplete?: boolean;
     /** Simulate the chosen slot being taken at booking. */

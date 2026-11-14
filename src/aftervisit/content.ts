@@ -1,4 +1,5 @@
 import { estimateLine, type CostEstimate } from "@/data/estimate";
+import { reminderEstimate } from "@/facts";
 import { freeToRescheduleLine } from "@/payment/summary";
 import { formatInZone, type UsState } from "@/time";
 
@@ -19,6 +20,28 @@ export interface VisitContext {
   smsConsent: boolean;
   /** The cost estimate from the Insurance check (A1), shown in the email body. */
   estimate: CostEstimate;
+  /**
+   * Whether coverage was verified by the 48-hour mark, and if so whether the
+   * confirmed cost matched the estimate. "estimated" (default) = not yet
+   * confirmed; "confirmed" = matched; "changed" = confirmed at a different amount.
+   */
+  costOutcome?: "estimated" | "confirmed" | "changed";
+}
+
+/**
+ * The cost-confirmation line for the 48-hour reminder, once coverage has been
+ * verified. Amounts come from the reminderEstimate fact, never a literal.
+ */
+function costConfirmationLine(ctx: VisitContext): string | null {
+  const estimated = reminderEstimate.estimated.value;
+  const confirmed = reminderEstimate.confirmed.value;
+  if (ctx.costOutcome === "confirmed") {
+    return `Good news: your cost is confirmed at $${estimated} per visit, just as we estimated. [See the breakdown]`;
+  }
+  if (ctx.costOutcome === "changed") {
+    return `Your confirmed cost is $${confirmed}, not the $${estimated} we estimated. Your plan applied a specialist copay. [See why]`;
+  }
+  return null;
 }
 
 /** The clinician's first name, without a title like "Dr." */
@@ -77,26 +100,33 @@ function insuranceLine(ctx: VisitContext): string | null {
 export function reminderCards(ctx: VisitContext): ReminderCard[] {
   const when = formatInZone(ctx.slotIso, ctx.state);
   const rescheduleLink = "Reschedule or cancel: [open your visit]";
+  // The 48-hour reminder swaps the estimate for a confirmed/changed cost line
+  // once coverage is verified; the later reminders keep the estimate.
+  const confirmedCost = costConfirmationLine(ctx);
 
-  const card = (lead: string, leadLine: string): ReminderCard => {
-    const body = [
-      leadLine,
-      `Your video visit is ${when}.`,
-      estimateLine(ctx.estimate),
-      formsLine(ctx),
-      insuranceLine(ctx),
-      rescheduleLink,
-    ].filter((line): line is string => Boolean(line));
+  const card = (lead: string, leadLine: string, costLine: string, smsCostNote = ""): ReminderCard => {
+    const body = [leadLine, `Your video visit is ${when}.`, costLine, formsLine(ctx), insuranceLine(ctx), rescheduleLink].filter(
+      (line): line is string => Boolean(line),
+    );
     // One short SMS, kept well under 160 characters.
-    const sms = `Legion: your visit with ${clinicianFirst(ctx.clinicianName)} is ${lead} away, ${when}. Reschedule: [link]`;
+    const sms = `Legion: your visit with ${clinicianFirst(ctx.clinicianName)} is ${lead} away, ${when}.${smsCostNote} Reschedule: [link]`;
     return { lead, email: { subject: `Your visit with ${ctx.clinicianName} is ${lead} away`, body }, sms };
   };
 
+  const estimate = estimateLine(ctx.estimate);
+  // A tiny SMS cost note for the confirmed/changed variants (keeps the text < 160).
+  const smsCostNote =
+    ctx.costOutcome === "confirmed"
+      ? ` Cost confirmed: $${reminderEstimate.estimated.value}/visit.`
+      : ctx.costOutcome === "changed"
+        ? ` Cost now $${reminderEstimate.confirmed.value}/visit (was $${reminderEstimate.estimated.value}).`
+        : "";
+
   return [
     // The 48-hour reminder leads with the free-to-reschedule cutoff.
-    card("48 hours", freeToRescheduleLine(ctx.slotIso, ctx.state)),
-    card("24 hours", `Your visit is 24 hours away. Here's everything you need.`),
-    card("1 hour", `Your visit is 1 hour away. Find a quiet, private spot and your join link.`),
+    card("48 hours", freeToRescheduleLine(ctx.slotIso, ctx.state), confirmedCost ?? estimate, smsCostNote),
+    card("24 hours", `Your visit is 24 hours away. Here's everything you need.`, estimate),
+    card("1 hour", `Your visit is 1 hour away. Find a quiet, private spot and your join link.`, estimate),
   ];
 }
 

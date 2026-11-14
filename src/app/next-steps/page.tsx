@@ -61,15 +61,19 @@ export default function NextStepsPage() {
     <Screen>
       <h1 className="text-2xl font-semibold">Thanks for telling us. Here&apos;s what you can do next.</h1>
 
-      {exclusions.map((criterion) => (
-        <section key={criterion} aria-labelledby={`reason-${criterion}`} className="flex flex-col gap-2">
-          <h2 id={`reason-${criterion}`} className="text-lg font-semibold">
-            {REASONS[criterion].heading}
-          </h2>
-          <p className="text-ink-muted">{REASONS[criterion].why}</p>
-          <p>{REASONS[criterion].guidance}</p>
-        </section>
-      ))}
+      {exclusions.map((criterion) =>
+        criterion === "coverage" && answers.lateDiscovery ? (
+          <LateDiscovery key={criterion} discovery={answers.lateDiscovery} />
+        ) : (
+          <section key={criterion} aria-labelledby={`reason-${criterion}`} className="flex flex-col gap-2">
+            <h2 id={`reason-${criterion}`} className="text-lg font-semibold">
+              {REASONS[criterion].heading}
+            </h2>
+            <p className="text-ink-muted">{REASONS[criterion].why}</p>
+            <p>{REASONS[criterion].guidance}</p>
+          </section>
+        ),
+      )}
 
       <section aria-labelledby="crisis" className="flex flex-col gap-2 rounded-lg bg-surface p-4">
         <h2 id="crisis" className="text-lg font-semibold">
@@ -93,6 +97,41 @@ export default function NextStepsPage() {
         Answered something by mistake? Change your answers
       </TextLink>
     </Screen>
+  );
+}
+
+const PROGRAM_LABEL = { medicaid: "Medicaid", medicare: "Medicare" } as const;
+
+/**
+ * The late-exclusion screen: coverage discovery returned a government plan after
+ * the patient had answered (often "No") about Medicare/Medicaid. It names the
+ * plan, says what it is, acknowledges the late and (when it contradicts the
+ * earlier answer) apologetic catch, and points to a real next step. The waitlist
+ * is the NotifyMe form below.
+ */
+function LateDiscovery({ discovery }: { discovery: NonNullable<ReturnType<typeof useAnswers>>["lateDiscovery"] }) {
+  if (!discovery) return null;
+  const program = PROGRAM_LABEL[discovery.program];
+  return (
+    <section aria-labelledby="reason-coverage" className="flex flex-col gap-2">
+      <h2 id="reason-coverage" className="text-lg font-semibold">
+        {discovery.planLabel} looks like a {program} plan
+      </h2>
+      {discovery.contradicted && (
+        <p className="text-ink-muted">
+          Earlier you said you don&apos;t have Medicare or Medicaid, so we&apos;re sorry to raise this now, after you&apos;d
+          started booking.
+        </p>
+      )}
+      <p className="text-ink-muted">
+        When we checked your coverage, {discovery.planLabel} came back, and that&apos;s a {program} plan. Legion can&apos;t
+        accept Medicare or Medicaid right now, so we can&apos;t book this visit through it.
+      </p>
+      <p>
+        If that isn&apos;t your current plan, your insurer can confirm what&apos;s active, the member services number is
+        usually on your card. You can also leave your email below and we&apos;ll tell you when Legion can accept these plans.
+      </p>
+    </section>
   );
 }
 

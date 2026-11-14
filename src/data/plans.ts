@@ -17,6 +17,8 @@ export interface PlanEligibility {
   deductibleRemaining: number | null;
   /** Coinsurance percent after the deductible is met. */
   coinsurance: number | null;
+  /** A government program Legion can't accept: the plan is excluded, not costed. */
+  program?: "medicaid" | "medicare";
 }
 
 /** Synthetic, for prototype only. */
@@ -31,6 +33,9 @@ export const PLANS: Record<string, PlanEligibility> = {
   demo_care: { psychiatryCovered: false, copay: null, deductibleRemaining: null, coinsurance: null },
   // Utah payer: a copay plan.
   mountain_health: { psychiatryCovered: true, copay: 35, deductibleRemaining: 0, coinsurance: null },
+  // A Medicaid plan: a government program Legion can't accept. Surfaced by the
+  // coverage discovery at Insurance, which drives the late-exclusion path.
+  sample_medicaid: { psychiatryCovered: false, copay: null, deductibleRemaining: null, coinsurance: null, program: "medicaid" },
 };
 
 export type EligibilityResult = "copay" | "deductible" | "not_covered" | "failed" | "self_pay";
@@ -44,6 +49,11 @@ export function resultForPlan(payerId: string | undefined): EligibilityResult {
   if (plan.copay != null) return "copay";
   if (plan.deductibleRemaining != null && plan.deductibleRemaining > 0) return "deductible";
   return "failed";
+}
+
+/** The government program a plan belongs to (Medicare/Medicaid), or null. */
+export function programForPlan(payerId: string | undefined): "medicaid" | "medicare" | null {
+  return (payerId && PLANS[payerId]?.program) || null;
 }
 
 export function planLabel(payerId: string | undefined): string {
