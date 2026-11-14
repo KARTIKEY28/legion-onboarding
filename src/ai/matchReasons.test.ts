@@ -3,7 +3,7 @@ import { CLINICIANS } from "@/clinicians/data";
 import { cardEvidence, evidenceTier, type MatchReasonFacts } from "@/clinicians/match";
 import { cardEvidenceLine, profileOutcomeLine, reasonsTemplate, validateReasons } from "./matchReasons";
 
-const c1 = CLINICIANS.find((c) => c.id === "c1")!; // low_mood, worry, sleep, grief; experience 180; outcomes cohort 64
+const c1 = CLINICIANS.find((c) => c.id === "c1")!; // low_mood, worry, sleep, panic; experience 180; outcomes cohort 64
 
 const facts = (over: Partial<MatchReasonFacts> = {}): MatchReasonFacts => ({
   matchedTopics: [],
@@ -59,7 +59,7 @@ describe("reason validator", () => {
   });
 
   it("rejects a concern the clinician does not list", () => {
-    // c1 does not specialise in alcohol or drug use.
-    expect(validateReasons(["Focuses on alcohol or drug use"], c1)).toBe(false);
+    // c1 does not specialise in mood swings.
+    expect(validateReasons(["Focuses on mood swings"], c1)).toBe(false);
   });
 });

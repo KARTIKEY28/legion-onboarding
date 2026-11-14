@@ -68,9 +68,9 @@ describe("the ranking bug: low mood + weekday mornings", () => {
 
 describe("hard constraints decide who can be strong", () => {
   it("a: every strong match covers a chosen concern", () => {
-    const result = matchClinicians({ state: "TX", topics: ["grief"], windows: [] }, NOW);
+    const result = matchClinicians({ state: "TX", topics: ["past_events"], windows: [] }, NOW);
     for (const m of result.strongMatches) {
-      expect(m.clinician.specialties).toContain("grief");
+      expect(m.clinician.specialties).toContain("past_events");
     }
   });
 
@@ -98,14 +98,14 @@ describe("hard constraints decide who can be strong", () => {
   });
 
   it("a fully booked clinician is never a strong match", () => {
-    expect(passesHardConstraints(clinician("c7"), { state: "TX", topics: ["eating"], windows: [] }, NOW)).toBe(false);
+    expect(passesHardConstraints(clinician("c7"), { state: "TX", topics: ["unwanted_thoughts"], windows: [] }, NOW)).toBe(false);
   });
 });
 
 describe("no-strong-match state fires only at zero strong matches", () => {
   it("shows matches (not the no-match state) when one or two clinicians are strong", () => {
-    // grief + weekday mornings: only Dana and Elena are strong (two), so it is not a no-match state.
-    const result = matchClinicians({ state: "TX", topics: ["grief"], windows: ["weekday_mornings"] }, NOW);
+    // mood swings + weekday mornings: only James and Elena are strong (two), so it is not a no-match state.
+    const result = matchClinicians({ state: "TX", topics: ["mood_swings"], windows: ["weekday_mornings"] }, NOW);
     expect(result.strongMatches.length).toBe(2);
     expect(result.noStrongMatch).toBe(false);
     expect(result.alsoAvailable.length).toBe(1); // filled to three, labeled honestly

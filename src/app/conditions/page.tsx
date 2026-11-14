@@ -8,6 +8,7 @@ import { Chip } from "@/components/form";
 import { CheckOption, CrisisPanel, SafeFreeText } from "@/components/safety";
 import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, barPrimary } from "@/components/ui";
 import { conditionTopics, type TopicId } from "@/facts";
+import { mentionsOutOfScope } from "@/data/scope";
 import { localSafetyCheck } from "@/safety/local";
 import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
 
@@ -115,6 +116,12 @@ function ConditionsForm({ initial }: { initial: SessionAnswers["conditions"] }) 
             step="conditions"
             onEscalate={(escalated) => escalated && setPanelShown(true)}
           />
+        )}
+        {ownWords && mentionsOutOfScope(freeText) && !localSafetyCheck(freeText).concern && (
+          <p data-testid="out-of-scope" role="status" className="rounded-md bg-surface px-4 py-3 text-sm text-ink">
+            We may not be the right fit for this on its own, but you can still book and your clinician will talk it through with
+            you.
+          </p>
         )}
         {panelShown && !ownWords && <CrisisPanel ref={panelRef} />}
 

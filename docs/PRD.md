@@ -252,6 +252,12 @@ Guardrails stay constant across tests: crisis routing reached, match rejection (
 | Slot taken before booking | Nothing holds the slot, so another patient can book it before this one pays | Check availability at booking, show the next available times if the slot is gone, and do not use a countdown as pressure. Track reservation.failed with a reason |
 | Live booking | Saving a card or insurance on Legion's live payment page books a real appointment, and the 48 hour cancellation policy can trigger a $100 fee | Stop before saving anything on the live page. The prototype uses Stripe's standard test card and never touches the live flow. This goes in CLAUDE.md |
 
+## Language: a half-served need
+
+The flow lets a patient ask for a **Spanish-speaking clinician** (a preference on the Needs step, matched as a hard-ish filter), and several clinicians speak Spanish. But the **onboarding itself is English-only**: every question, label, estimate and reminder is in English. That is a real gap, not a rounding error. Texas is roughly 40% Hispanic and Spanish is the state's second language by a wide margin, so an English-only intake asks the very patients who most need a Spanish-speaking clinician to navigate the hardest part, finding one, in their second language. Offering the preference without translating the path around it is half a solution.
+
+**Full Spanish localisation is the obvious next step**: translate the entire flow (not just clinician bios), detect or ask for language at the top, and carry it through to the reminders and the post-visit screens. The facts-from-fixed-sources rule helps here, because the numbers are already separated from the copy, but the copy itself, the safety phrases, and the AI reflect-back and cost-summary prompts would all need a reviewed Spanish version. This is out of scope for the prototype and called out so it is not mistaken for done.
+
 ## Build plan
 
 **Build in Claude Code, in thin vertical slices.** Each slice is deployable on its own, so there is always a working prototype.
