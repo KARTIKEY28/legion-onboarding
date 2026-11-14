@@ -8,6 +8,7 @@ import { ExclusionNote, RadioQuestion } from "@/components/form";
 import { CheckOption } from "@/components/safety";
 import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, barPrimary } from "@/components/ui";
 import { resultFromInsurance } from "@/data/estimate";
+import { planLabel, programForPlan } from "@/data/plans";
 import { payersForState } from "@/facts";
 import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
 
@@ -114,10 +115,23 @@ function InsuranceForm({ answers }: { answers: SessionAnswers }) {
     getTracker()("insurance.submitted", { path: path! });
 
     if (path === "insured") {
-      // Run the simulated eligibility check (results come only from plans.ts).
+      // Run the simulated coverage discovery + eligibility check (from plans.ts).
       const estimate = resultFromInsurance({ insurance });
+      // Asymmetric trust: a "Yes" excludes up front, but a "No" is verified here.
+      // If discovery returns a government plan, exclude late and acknowledge it.
+      const program = programForPlan(insurance.payerId);
+      const saidNo = answers.coverage === "no" || coverage === "no";
       setChecking(true);
       window.setTimeout(() => {
+        if (program) {
+          updateAnswers({
+            exclusions: ["coverage"],
+            lateDiscovery: { planLabel: planLabel(insurance.payerId), program, contradicted: saidNo },
+          });
+          getTracker()("eligibility.checked_cost", { result: "not_covered" });
+          router.push("/next-steps");
+          return;
+        }
         updateAnswers({ eligibilityCost: estimate });
         if (estimate.result !== "self_pay") {
           getTracker()("eligibility.checked_cost", { result: estimate.result });

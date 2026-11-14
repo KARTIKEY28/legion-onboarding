@@ -31,6 +31,12 @@ const INSURANCE_STATES = [
   { id: "more_info", label: "Needs info" },
 ] as const;
 
+const COST_OUTCOMES = [
+  { id: "estimated", label: "Estimate only" },
+  { id: "confirmed", label: "Confirmed, same" },
+  { id: "changed", label: "Confirmed, changed" },
+] as const;
+
 /** The synthetic persona used across the demo and all screenshots. */
 function fillDemoPatient() {
   const slot = new Date();
@@ -128,6 +134,14 @@ export function DemoBar() {
               {INSURANCE_STATES.map((s) => (
                 <Chip key={s.id} active={demo.insuranceState === s.id} onClick={() => setDemo({ insuranceState: s.id })}>
                   {s.label}
+                </Chip>
+              ))}
+            </Row>
+
+            <Row label="Cost (48h)">
+              {COST_OUTCOMES.map((c) => (
+                <Chip key={c.id} active={demo.costOutcome === c.id} onClick={() => setDemo({ costOutcome: c.id })}>
+                  {c.label}
                 </Chip>
               ))}
             </Row>

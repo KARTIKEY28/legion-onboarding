@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { estimateLine, estimateNumbersAllowed, resultFromInsurance } from "./estimate";
+import { programForPlan } from "./plans";
 import type { SessionAnswers } from "@/session/store";
 
 const insured = (payerId?: string, addLater = false): SessionAnswers => ({
@@ -22,6 +23,17 @@ describe("eligibility result from the insurance answers", () => {
   });
   it("self pay -> self_pay (no check)", () => {
     expect(resultFromInsurance({ insurance: { path: "self_pay" } }).result).toBe("self_pay");
+  });
+});
+
+describe("government-program discovery (late exclusion)", () => {
+  it("flags a Medicaid plan as a government program", () => {
+    expect(programForPlan("sample_medicaid")).toBe("medicaid");
+  });
+  it("leaves ordinary plans unflagged", () => {
+    for (const id of ["example_health", "sample_insurance", "demo_care", "mountain_health", undefined, "other"]) {
+      expect(programForPlan(id)).toBeNull();
+    }
   });
 });
 

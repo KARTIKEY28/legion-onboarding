@@ -60,5 +60,6 @@ export function visitContext(a: SessionAnswers, demo: typeof DEMO_DEFAULTS): Vis
     insuranceState: demo.insuranceState,
     smsConsent: Boolean(a.patient?.smsConsent),
     estimate: estimateFromAnswers(a),
+    costOutcome: demo.costOutcome,
   };
 }

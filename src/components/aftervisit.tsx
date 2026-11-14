@@ -36,6 +36,7 @@ type DemoState = NonNullable<SessionAnswers["demo"]>;
 export const DEMO_DEFAULTS: Required<DemoState> = {
   clock: "far",
   insuranceState: "checking",
+  costOutcome: "estimated",
   formsComplete: false,
   visitComplete: false,
   slotTaken: false,

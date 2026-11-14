@@ -71,6 +71,25 @@ export const cancellation = {
   },
 } satisfies Record<string, Fact<number>>;
 
+/**
+ * Illustrative amounts for the after-visit reminder cost-confirmation variants
+ * (slice 7, a design proposal). `estimated` is the number shown before the
+ * visit; `confirmed` is the different amount used by the "estimate changed"
+ * variant. Synthetic, for the prototype only.
+ */
+export const reminderEstimate = {
+  estimated: {
+    value: 30,
+    status: "assumption",
+    source: "Illustrative copay estimate for the reminder cost variants (prototype).",
+  },
+  confirmed: {
+    value: 45,
+    status: "assumption",
+    source: "Illustrative confirmed copay for the 'estimate changed' reminder variant (prototype).",
+  },
+} satisfies Record<string, Fact<number>>;
+
 /** The only amounts, numbers and periods a cost summary may contain. */
 export const COST_FACT_VALUES = {
   dollars: [
