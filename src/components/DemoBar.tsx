@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { AFTER_VISIT_STEPS, DEMO_DEFAULTS, setDemo, useDemo } from "@/components/aftervisit";
-import { formatCentral } from "@/time";
+import { formatInZone } from "@/time";
 import { updateAnswers } from "@/session/store";
 
 /**
@@ -39,6 +39,7 @@ function fillDemoPatient() {
   const iso = slot.toISOString();
   updateAnswers({
     inTexas: "yes",
+    state: "TX",
     dob: { month: "03", day: "14", year: "1992" },
     conditions: { topics: ["low_mood", "worry"], unsure: false, skipped: false },
     safety: { recentThoughts: "no" },
@@ -47,7 +48,7 @@ function fillDemoPatient() {
     notifyEmail: "alex.rivera@example.com",
     patient: { firstName: "Alex", lastName: "Rivera", phone: "(555) 010-0142" },
     selectedClinician: { id: "c1", name: "Dana Whitfield" },
-    selectedSlot: { iso, label: formatCentral(iso) },
+    selectedSlot: { iso, label: formatInZone(iso, "TX") },
     booked: true,
   });
 }

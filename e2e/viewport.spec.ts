@@ -44,6 +44,7 @@ test("the primary action is in the viewport at every step (390x844)", async ({ p
 
 const FULL_PERSONA = {
   inTexas: "yes",
+  state: "TX",
   dob: { month: "03", day: "14", year: "1992" },
   conditions: { topics: ["low_mood", "worry"], unsure: false, skipped: false },
   safety: { recentThoughts: "no" },

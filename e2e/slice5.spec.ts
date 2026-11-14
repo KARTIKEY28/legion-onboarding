@@ -11,6 +11,7 @@ async function seedAndOpenMatch(page: Page, answers: Record<string, unknown>) {
 
 const STRONG = {
   inTexas: "yes",
+  state: "TX",
   conditions: { topics: ["low_mood", "worry"], unsure: false, skipped: false },
   insurance: { path: "self_pay" },
 };
@@ -100,6 +101,7 @@ test("no strong match: a language with no matching clinician shows the closest o
   // Worry + Spanish: no Spanish-speaking clinician works with worry, so no strong match.
   await seedAndOpenMatch(page, {
     inTexas: "yes",
+    state: "TX",
     conditions: { topics: ["worry"], unsure: false, skipped: false },
     needs: { language: "es" },
     insurance: { path: "self_pay" },

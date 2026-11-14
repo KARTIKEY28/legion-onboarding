@@ -9,9 +9,9 @@ import { updateAnswers, useAnswers } from "@/session/store";
 
 const REASONS: Record<Criterion, { heading: string; why: string; guidance: string }> = {
   texas: {
-    heading: `Legion can only see you while you're in ${eligibility.stateName.value}`,
-    why: `Legion's clinicians are set up to see patients who are in ${eligibility.stateName.value} during their visits.`,
-    guidance: `If you'll be in ${eligibility.stateName.value} later, you're welcome to come back and start again then. For care where you are now, your doctor or your insurer can suggest clinicians near you.`,
+    heading: `Legion sees patients in ${eligibility.servedStates.value.join(" and ")} right now`,
+    why: `Clinicians can only see patients who are physically in ${eligibility.servedStates.value.join(" or ")} during a visit.`,
+    guidance: `We're adding states. Leave your email below and we'll tell you when we reach yours. For care where you are now, your doctor or your insurer can suggest clinicians near you.`,
   },
   age: {
     heading: `Legion sees adults ${eligibility.minimumAge.value} and older`,
@@ -108,7 +108,8 @@ function NotifyMe({ initialEmail }: { initialEmail?: string }) {
       return;
     }
     setError(undefined);
-    updateAnswers({ notifyEmail: email.trim() });
+    // Doubles as the multi-state waitlist email when the patient is outside the served states.
+    updateAnswers({ notifyEmail: email.trim(), waitlistEmail: email.trim() });
     setSaved(true);
   }
 

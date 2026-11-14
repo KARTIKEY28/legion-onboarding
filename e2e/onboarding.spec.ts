@@ -27,7 +27,7 @@ test("happy path: eligible patient reaches Conditions", async ({ page }) => {
   // Nobody is asked twice: going back shows the saved answers.
   await page.goto("/about");
   await expect(page.getByLabel("Date of birth")).toHaveValue("04/15/1990");
-  await expect(page.getByRole("group", { name: /Texas/ }).getByLabel("Yes", { exact: true })).toBeChecked();
+  await expect(page.getByRole("group", { name: /Where will you be/ }).getByLabel("Texas", { exact: true })).toBeChecked();
 });
 
 test("not sure about coverage continues and is confirmed later", async ({ page }) => {
@@ -39,7 +39,7 @@ test("not sure about coverage continues and is confirmed later", async ({ page }
 });
 
 const exclusions = [
-  { name: "not in Texas", answers: { ...ELIGIBLE, texas: "No" }, criterion: "texas", heading: /only see you while you're in Texas/ },
+  { name: "not in Texas or Utah", answers: { ...ELIGIBLE, location: "Not in Texas or Utah" }, criterion: "texas", heading: /Texas and Utah/ },
   { name: "under 18", answers: { ...ELIGIBLE, dob: MINOR_DOB }, criterion: "age", heading: /adults 18 and older/ },
   { name: "Medicare or Medicaid", answers: { ...ELIGIBLE, coverage: "Yes" }, criterion: "coverage", heading: /can't accept Medicare or Medicaid/ },
 ] as const;
@@ -71,7 +71,7 @@ for (const exclusion of exclusions) {
 test("no event contains personal data", async ({ page }) => {
   const email = "synthetic.patient@example.com";
   await startFlow(page);
-  await answerAbout(page, { ...ELIGIBLE, texas: "No" });
+  await answerAbout(page, { ...ELIGIBLE, location: "Not in Texas or Utah" });
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Email me" }).click();
   await expect(page.getByText(/Saved\./)).toBeVisible();

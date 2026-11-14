@@ -24,7 +24,7 @@ import { type AvailabilityWindow } from "@/clinicians/model";
 import { concernPhrase, joinPhrases, languagePhrase } from "@/data/phrases";
 import { estimateFromAnswers, estimateLine } from "@/data/estimate";
 import { LoadingScreen, Progress, Screen, TextLink, secondaryClass } from "@/components/ui";
-import { formatCentral } from "@/time";
+import { formatInZone, type UsState } from "@/time";
 import { isWithinCancellationWindow, under48Line } from "@/payment/summary";
 import { slotTakenArmed } from "@/devtoggles";
 import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
@@ -154,7 +154,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
     const { match, slot, from, source, rank } = selection;
     updateAnswers({
       selectedClinician: { id: match.clinician.id, name: match.clinician.name },
-      selectedSlot: { iso: slot.iso, label: formatCentral(slot.iso) },
+      selectedSlot: { iso: slot.iso, label: formatInZone(slot.iso, baseInput.state) },
     });
     getTracker()("provider.selected", { from, source, rank, evidence_tier: tierKey(match.evidence) });
     router.push("/cost");
@@ -261,6 +261,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
                 filler={!match.strong}
                 selectedIso={selection?.match.clinician.id === match.clinician.id ? selection.slot.iso : null}
                 taken={takenFor === match.clinician.id}
+                state={baseInput.state}
                 onPick={(slot) => select(match, slot, "top_match", i + 1, "card")}
                 onOpenProfile={() => openProfile(match.clinician.id, "card", i + 1)}
                 onChooseAnother={() => setTakenFor(null)}
@@ -283,6 +284,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
                   filler={!match.strong}
                   selectedIso={selection?.match.clinician.id === match.clinician.id ? selection.slot.iso : null}
                   taken={takenFor === match.clinician.id}
+                  state={baseInput.state}
                   onPick={(slot) => select(match, slot, "full_list", i + 1, "card")}
                   onOpenProfile={() => openProfile(match.clinician.id, "full_list", i + 1)}
                   onChooseAnother={() => setTakenFor(null)}
@@ -340,6 +342,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
           selection={selection}
           estimate={estimateLine(estimate)}
           under48={isWithinCancellationWindow(selection.slot.iso, now) ? under48Line() : null}
+          state={baseInput.state}
           onContinue={continueBooking}
         />
       )}
@@ -351,11 +354,13 @@ function ConfirmBar({
   selection,
   estimate,
   under48,
+  state,
   onContinue,
 }: {
   selection: Selection;
   estimate: string;
   under48: string | null;
+  state: UsState;
   onContinue: () => void;
 }) {
   const { clinician } = selection.match;
@@ -368,7 +373,7 @@ function ConfirmBar({
         <Portrait id={clinician.id} name={clinician.name} size={40} />
         <div className="flex min-w-0 flex-1 flex-col">
           <p className="truncate text-sm font-medium">
-            {clinician.name} · {formatCentral(selection.slot.iso)}
+            {clinician.name} · {formatInZone(selection.slot.iso, state)}
           </p>
           <p className="truncate text-xs text-ink-muted">{estimate}</p>
           {under48 && <p className="truncate text-xs font-medium text-ink">{under48}</p>}
@@ -392,6 +397,7 @@ function ClinicianCard({
   filler,
   selectedIso,
   taken,
+  state,
   onPick,
   onOpenProfile,
   onChooseAnother,
@@ -402,6 +408,7 @@ function ClinicianCard({
   filler: boolean;
   selectedIso: string | null;
   taken: boolean;
+  state: UsState;
   onPick: (slot: Slot) => void;
   onOpenProfile: () => void;
   onChooseAnother: () => void;
@@ -416,7 +423,7 @@ function ClinicianCard({
   const timeReason =
     timeFilter === "any"
       ? slots[0]
-        ? `Next opening: ${formatCentral(slots[0].iso)}`
+        ? `Next opening: ${formatInZone(slots[0].iso, state)}`
         : null
       : `${TIME_CHIPS.find((c) => c.id === timeFilter)?.label} openings`;
   const planOrLang = facts.payer ? `Takes ${facts.payer}` : facts.language ? `Speaks ${languagePhrase[facts.language]}` : null;
@@ -489,7 +496,7 @@ function ClinicianCard({
                   isSelected ? "border-accent bg-accent text-accent-ink" : "border-accent bg-accent-soft"
                 }`}
               >
-                {formatCentral(slot.iso)}
+                {formatInZone(slot.iso, state)}
               </button>
             );
           })}

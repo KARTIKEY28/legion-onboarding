@@ -8,7 +8,7 @@ import { ROLE_EXPLAINER, roleLabel, sampleCredentials } from "@/clinicians/roles
 import { openSlots, type Slot } from "@/clinicians/schedule";
 import { concernPhrase, languagePhrase } from "@/data/phrases";
 import { samplePayers } from "@/facts";
-import { centralDay, centralTime } from "@/time";
+import { dayInZone, timeInZone } from "@/time";
 import { facts as reasonFacts } from "@/clinicians/match";
 import { Portrait } from "./Portrait";
 
@@ -41,8 +41,8 @@ export function ClinicianProfile({
   const outcomeLine = profileOutcomeLine(evidence);
   const experienceLine = profileExperienceLine(clinician);
 
-  // Availability grouped by Central-Time day, chosen windows first within a day.
-  const days = useMemo(() => groupByDay(openSlots(clinician, now), input.windows), [clinician, now, input.windows]);
+  // Availability grouped by the patient's-zone day, chosen windows first within a day.
+  const days = useMemo(() => groupByDay(openSlots(clinician, now), input.windows, input.state), [clinician, now, input.windows, input.state]);
 
   // Focus trap + Escape.
   useEffect(() => {
@@ -210,7 +210,7 @@ export function ClinicianProfile({
                         onClick={() => onPick(slot)}
                         className="min-h-11 rounded-md border border-accent bg-accent-soft px-4 py-2 text-base font-medium"
                       >
-                        {centralTime(slot.iso)}
+                        {timeInZone(slot.iso, input.state)}
                       </button>
                     ))}
                   </div>
@@ -229,13 +229,13 @@ interface DayGroup {
   slots: Slot[];
 }
 
-/** Groups slots by Central day in chronological order; chosen windows first within a day. */
-function groupByDay(slots: Slot[], windows: MatchInput["windows"]): DayGroup[] {
+/** Groups slots by the patient's-zone day in chronological order; chosen windows first within a day. */
+function groupByDay(slots: Slot[], windows: MatchInput["windows"], state: MatchInput["state"]): DayGroup[] {
   const chosen = new Set(windows);
   const rank = (w: Slot["window"]) => (chosen.size && chosen.has(w) ? 0 : 1);
   const byDay = new Map<string, Slot[]>();
   for (const slot of slots) {
-    const key = centralDay(slot.iso);
+    const key = dayInZone(slot.iso, state);
     const list = byDay.get(key) ?? [];
     list.push(slot);
     byDay.set(key, list);

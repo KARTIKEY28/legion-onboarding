@@ -12,7 +12,7 @@ import { nextSlots, type Slot } from "@/clinicians/schedule";
 import { cardOnFileLines, changeTermsLine } from "@/payment/summary";
 import { estimateFromAnswers, estimateLine } from "@/data/estimate";
 import { updateAnswers, useAnswers } from "@/session/store";
-import { formatCentral } from "@/time";
+import { formatInZone, type UsState } from "@/time";
 
 const NEXT_STEPS = [
   "Intake forms, so your clinician knows you before you meet (optional).",
@@ -26,6 +26,7 @@ export default function ConfirmationPage() {
   if (!answers) return <LoadingScreen />;
   const clinician = answers.selectedClinician;
   const slot = answers.selectedSlot;
+  const state = answers.state ?? "TX";
   return (
     <AfterVisitScreen stepId="confirmation">
       <Confirmed
@@ -35,6 +36,7 @@ export default function ConfirmationPage() {
         path={answers.insurance?.path ?? "not_sure"}
         estimate={estimateLine(estimateFromAnswers(answers))}
         returning={answers.returningPatient}
+        state={state}
       />
     </AfterVisitScreen>
   );
@@ -47,6 +49,7 @@ function Confirmed({
   path,
   estimate,
   returning,
+  state,
 }: {
   clinicianId?: string;
   clinicianName?: string;
@@ -54,6 +57,7 @@ function Confirmed({
   path: "insured" | "self_pay" | "not_sure";
   estimate: string;
   returning?: boolean;
+  state: UsState;
 }) {
   useTrackOnce("confirmation.viewed", "confirmation.viewed");
 
@@ -77,7 +81,7 @@ function Confirmed({
 
       <VisitSummary label="Your visit" clinicianId={clinicianId} clinicianName={clinicianName}>
         <p data-testid="confirmation-when" className="text-base">
-          {slotIso ? formatCentral(slotIso) : "Time to be confirmed"}
+          {slotIso ? formatInZone(slotIso, state) : "Time to be confirmed"}
         </p>
         <p data-testid="confirmation-cost" className="text-sm text-ink-muted">
           {estimate}
@@ -87,7 +91,7 @@ function Confirmed({
         </button>
       </VisitSummary>
 
-      {clinicianId && slotIso && <Reschedule clinicianId={clinicianId} clinicianName={clinicianName ?? "your clinician"} slotIso={slotIso} />}
+      {clinicianId && slotIso && <Reschedule clinicianId={clinicianId} clinicianName={clinicianName ?? "your clinician"} slotIso={slotIso} state={state} />}
 
       <section aria-label="Payment" className="flex flex-col gap-1 rounded-lg bg-surface p-4 text-sm text-ink-muted">
         {cardOnFileLines(path).map((line) => (
@@ -120,7 +124,7 @@ function Confirmed({
   );
 }
 
-function Reschedule({ clinicianId, clinicianName, slotIso }: { clinicianId: string; clinicianName: string; slotIso: string }) {
+function Reschedule({ clinicianId, clinicianName, slotIso, state }: { clinicianId: string; clinicianName: string; slotIso: string; state: UsState }) {
   const now = useRef(new Date()).current;
   const [open, setOpen] = useState(false);
   const clinician = CLINICIANS.find((c) => c.id === clinicianId);
@@ -132,14 +136,14 @@ function Reschedule({ clinicianId, clinicianName, slotIso }: { clinicianId: stri
   }
 
   function pick(slot: Slot) {
-    updateAnswers({ selectedSlot: { iso: slot.iso, label: formatCentral(slot.iso) } });
+    updateAnswers({ selectedSlot: { iso: slot.iso, label: formatInZone(slot.iso, state) } });
     getTracker()("reschedule.completed");
     setOpen(false);
   }
 
   return (
     <section aria-label="Reschedule or cancel" className="flex flex-col gap-2 rounded-lg border border-line p-4">
-      <p className="text-sm text-ink-muted">{changeTermsLine(slotIso)}</p>
+      <p className="text-sm text-ink-muted">{changeTermsLine(slotIso, state)}</p>
       {!open ? (
         <button type="button" onClick={openSheet} className="self-start text-accent underline underline-offset-2">
           Need to change it? Reschedule or cancel
@@ -156,7 +160,7 @@ function Reschedule({ clinicianId, clinicianName, slotIso }: { clinicianId: stri
                   onClick={() => pick(slot)}
                   className="min-h-11 rounded-md border border-accent bg-accent-soft px-3 py-2 text-sm font-medium"
                 >
-                  {formatCentral(slot.iso)}
+                  {formatInZone(slot.iso, state)}
                 </button>
               ))}
             </div>

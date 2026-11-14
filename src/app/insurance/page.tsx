@@ -8,7 +8,7 @@ import { ExclusionNote, RadioQuestion } from "@/components/form";
 import { CheckOption } from "@/components/safety";
 import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, barPrimary } from "@/components/ui";
 import { resultFromInsurance } from "@/data/estimate";
-import { samplePayers } from "@/facts";
+import { payersForState } from "@/facts";
 import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
 
 type Path = NonNullable<SessionAnswers["insurance"]>["path"];
@@ -237,7 +237,7 @@ function InsuranceForm({ answers }: { answers: SessionAnswers }) {
                     className={inputClass(shown.payer)}
                   >
                     <option value="">Choose your plan</option>
-                    {samplePayers.value.map((payer) => (
+                    {payersForState(answers.state ?? "TX").map((payer) => (
                       <option key={payer.id} value={payer.id}>
                         {payer.label}
                       </option>

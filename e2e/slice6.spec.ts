@@ -9,6 +9,7 @@ async function seed(page: Page, answers: Record<string, unknown>) {
 
 const PICKED = {
   inTexas: "yes",
+  state: "TX",
   dob: { month: "04", day: "15", year: "1990" },
   conditions: { topics: ["low_mood"], unsure: false, skipped: false },
   needs: { availability: ["weekday_afternoons"] },
