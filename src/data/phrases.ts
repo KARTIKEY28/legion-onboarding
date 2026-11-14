@@ -16,15 +16,11 @@ import type { AvailabilityWindow, ClinicianGender, LanguageId } from "@/clinicia
 export const concernPhrase: Record<TopicId, string> = {
   low_mood: "low mood",
   worry: "ongoing worry",
+  panic: "panic attacks",
   mood_swings: "mood swings",
   focus: "focus and attention",
   sleep: "sleep",
-  stress: "stress",
   past_events: "the effects of past events",
-  relationships: "relationships",
-  grief: "grief and loss",
-  substances: "alcohol or drug use",
-  eating: "eating and body image",
   unwanted_thoughts: "hard-to-control thoughts or habits",
 };
 

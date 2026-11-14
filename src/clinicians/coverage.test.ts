@@ -29,6 +29,20 @@ describe("concern x weekday-window coverage", () => {
   }
 });
 
+describe("every condition is covered in each served state", () => {
+  // Each published condition must have at least two clinicians licensed in each
+  // state who treat it, so neither a Texas nor a Utah patient is ever left with
+  // a single option (or none) for a concern they chose.
+  for (const topic of conditionTopics.value) {
+    for (const state of ["TX", "UT"] as const) {
+      it(`${topic.id} has at least two ${state} clinicians who treat it`, () => {
+        const n = CLINICIANS.filter((c) => c.licensedStates.includes(state) && c.specialties.includes(topic.id)).length;
+        expect(n).toBeGreaterThanOrEqual(2);
+      });
+    }
+  }
+});
+
 describe("weekends are deliberately thin", () => {
   it("lists the weekend as a real, selectable window", () => {
     expect(AVAILABILITY_WINDOWS.map((w) => w.id)).toContain("weekends");
