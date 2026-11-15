@@ -8,27 +8,27 @@ test("the primary action is in the viewport at every step (390x844)", async ({ p
   await setModel(page, "fail");
 
   await page.goto("/start");
-  await expect(page.getByRole("link", { name: "Get started" })).toBeInViewport();
+  await expect(page.getByRole("button", { name: "Continue" })).toBeInViewport();
 
   await startFlow(page);
   await expect(page.getByRole("button", { name: "Continue" })).toBeInViewport();
   await answerAbout(page, ELIGIBLE);
 
-  await expect(page.getByText("Step 3 of 10 · Conditions")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Conditions");
   await expect(page.getByRole("button", { name: "Continue" })).toBeInViewport();
   await pickTopic(page, "Trouble sleeping");
   await page.getByRole("button", { name: "Continue" }).click();
 
-  await expect(page.getByText("Step 4 of 10 · Safety")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Safety");
   await expect(page.getByRole("button", { name: "Continue" })).toBeInViewport();
   await page.getByRole("group", { name: /thoughts of ending your life/ }).getByLabel("No", { exact: true }).check();
   await page.getByRole("button", { name: "Continue" }).click();
 
-  await expect(page.getByText("Step 5 of 10 · Insurance")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Insurance");
   await expect(page.getByRole("button", { name: "Continue" })).toBeInViewport();
   await choosePath(page, "I'll pay without insurance");
 
-  await expect(page.getByText("Step 6 of 10 · Needs")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
   await expect(page.getByRole("button", { name: "Continue" })).toBeInViewport();
   await page.getByRole("button", { name: "Continue" }).click();
 
@@ -38,7 +38,7 @@ test("the primary action is in the viewport at every step (390x844)", async ({ p
   await expect(page.getByRole("button", { name: "Continue" })).toBeInViewport();
   await page.getByRole("button", { name: "Continue" }).click();
 
-  await expect(page.getByText("Step 8 of 10 · Cost and terms")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Cost and terms");
   await expect(page.getByRole("link", { name: "Continue to create your account" })).toBeInViewport();
 });
 

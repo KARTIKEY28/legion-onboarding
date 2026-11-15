@@ -11,7 +11,7 @@ async function finishSafetyAndNeeds(page: Page) {
   await page.getByRole("group", { name: /thoughts of ending your life/ }).getByLabel("No", { exact: true }).check();
   await page.getByRole("button", { name: "Continue" }).click();
   await choosePath(page, "I'll pay without insurance");
-  await expect(page.getByText("Step 6 of 10 · Needs")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
   await page.getByRole("group", { name: /Language/ }).getByLabel("Spanish", { exact: true }).check();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/match$/);
@@ -20,12 +20,12 @@ async function finishSafetyAndNeeds(page: Page) {
 test("happy path: Conditions, Safety and Needs record clean events", async ({ page }) => {
   await setModel(page, "ok");
   await toConditions(page);
-  await expect(page.getByText("Step 3 of 10 · Conditions")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Conditions");
   await pickTopic(page, "Trouble sleeping");
   await pickTopic(page, "Worry that's hard to shake");
   await page.getByRole("button", { name: "Continue" }).click();
 
-  await expect(page.getByText("Step 4 of 10 · Safety")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Safety");
   await finishSafetyAndNeeds(page);
 
   const fired = await events(page);
@@ -57,7 +57,7 @@ test("a crisis phrase in free text opens help at once and never blocks", async (
   await expect(panel.getByRole("link", { name: "Call or text 988" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByText("Step 4 of 10 · Safety")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Safety");
 
   const escalated = (await events(page)).filter((e) => e.event === "safety.escalated");
   expect(escalated.map((e) => e.properties)).toEqual([{ source: "local", on_step: "conditions" }]);
@@ -66,7 +66,7 @@ test("a crisis phrase in free text opens help at once and never blocks", async (
 test("Safety loads with nothing preselected on either question", async ({ page }) => {
   await toConditions(page);
   await page.getByRole("button", { name: "Skip for now" }).click();
-  await expect(page.getByText("Step 4 of 10 · Safety")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Safety");
   for (const radio of await page.getByRole("radio").all()) {
     await expect(radio).not.toBeChecked();
   }
@@ -108,7 +108,7 @@ test("model unavailable: the flow still continues to the match step", async ({ p
   await toConditions(page);
   await pickTopic(page, "Trouble sleeping");
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByText("Step 4 of 10 · Safety")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Safety");
   await finishSafetyAndNeeds(page);
   await expect(page).toHaveURL(/\/match$/);
 });

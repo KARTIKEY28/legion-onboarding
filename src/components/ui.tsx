@@ -49,14 +49,19 @@ export function ActionBar({ children, backHref, backLabel = "Back" }: { children
 /** Full-width on mobile (inside the ActionBar), auto width on desktop. */
 export const barPrimary = "w-full md:w-auto";
 
-/** One progress indicator for the whole ten-step journey. */
+/**
+ * One progress indicator for the whole ten-step journey: a single continuous
+ * fill, no step number and no percentage. The section name sits above it for
+ * orientation; the step count stays in aria-valuetext for assistive tech only.
+ */
 export function Progress({ step }: { step: JourneyStepId }) {
   const current = stepNumber(step);
   const label = JOURNEY[current - 1].label;
+  const fill = (current / JOURNEY.length) * 100;
   return (
     <div className="flex flex-col gap-2">
-      <p className="micro">
-        Step {current} of {JOURNEY.length} · {label}
+      <p className="micro" data-testid="progress-step">
+        {label}
       </p>
       <div
         role="progressbar"
@@ -65,11 +70,9 @@ export function Progress({ step }: { step: JourneyStepId }) {
         aria-valuemax={JOURNEY.length}
         aria-valuenow={current}
         aria-valuetext={`Step ${current} of ${JOURNEY.length}, ${label}`}
-        className="flex gap-1"
+        className="h-1 w-full overflow-hidden rounded-md bg-line"
       >
-        {JOURNEY.map((s, i) => (
-          <span key={s.id} className={`h-1 flex-1 rounded-md ${i < current ? "bg-accent" : "bg-line"}`} />
-        ))}
+        <span className="block h-full rounded-md bg-accent transition-[width] duration-300" style={{ width: `${fill}%` }} />
       </div>
     </div>
   );

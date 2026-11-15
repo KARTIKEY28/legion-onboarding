@@ -11,26 +11,26 @@ test("Start to Visit complete: the full funnel reaches the primary outcome", asy
   // Onboarding
   await startFlow(page);
   await answerAbout(page, ELIGIBLE);
-  await expect(page.getByText("Step 3 of 10 · Conditions")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Conditions");
   await pickTopic(page, "Trouble sleeping");
   await page.getByRole("button", { name: "Continue" }).click();
 
-  await expect(page.getByText("Step 4 of 10 · Safety")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Safety");
   await page.getByRole("group", { name: /thoughts of ending your life/ }).getByLabel("No", { exact: true }).check();
   await page.getByRole("button", { name: "Continue" }).click();
 
   await choosePath(page, "I'll pay without insurance");
-  await expect(page.getByText("Step 6 of 10 · Needs")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
   await page.getByRole("button", { name: "Continue" }).click();
 
   // Match → Cost → Account
   await expect(page).toHaveURL(/\/match$/);
   await page.getByRole("article").first().getByRole("button", { name: /AM|PM/ }).first().click();
   await page.getByRole("button", { name: "Continue" }).click(); // confirm in the sticky bar
-  await expect(page.getByText("Step 8 of 10 · Cost and terms")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Cost and terms");
   await page.getByRole("link", { name: "Continue to create your account" }).click();
 
-  await expect(page.getByText("Step 9 of 10 · Account")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Account");
   await page.getByLabel("First name").fill("Alex");
   await page.getByLabel("Last name").fill("Rivera");
   await page.getByLabel("Email").fill("alex@example.com");
@@ -38,7 +38,7 @@ test("Start to Visit complete: the full funnel reaches the primary outcome", asy
   await page.getByRole("button", { name: "Continue to payment" }).click();
 
   // Payment
-  await expect(page.getByText("Step 10 of 10 · Payment")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Payment");
   await page.getByLabel("Card number").fill("4242 4242 4242 4242");
   await page.getByLabel("Expiry (MM/YY)").fill("12/30");
   await page.getByLabel("Security code").fill("123");

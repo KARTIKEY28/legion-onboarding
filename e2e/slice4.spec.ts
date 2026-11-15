@@ -13,18 +13,18 @@ async function toInsurance(page: Page, about: Answers = ELIGIBLE) {
   await answerAbout(page, about);
   await page.getByRole("button", { name: "Skip for now" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByText("Step 5 of 10 · Insurance")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Insurance");
 }
 
 /** Needs, then the Match stub, arriving on Cost and terms. */
 async function toCost(page: Page) {
-  await expect(page.getByText("Step 6 of 10 · Needs")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByText("Step 7 of 10 · Match")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Match");
   // Pick the first open time on the top match, then confirm in the sticky bar.
   await page.getByRole("article").first().getByRole("button", { name: /AM|PM/ }).first().click();
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByText("Step 8 of 10 · Cost and terms")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Cost and terms");
 }
 
 async function fillInsured(page: Page) {
@@ -67,7 +67,7 @@ test("insured path: a simulated eligibility check runs and reports a cost result
   await page.getByRole("button", { name: "Continue" }).click();
 
   await expect(page.getByText("Checking your coverage")).toBeVisible();
-  await expect(page.getByText("Step 6 of 10 · Needs")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
 
   const checked = (await events(page)).filter((e) => e.event === "eligibility.checked_cost");
   expect(checked.map((e) => e.properties)).toEqual([{ result: "deductible" }]); // Sample Insurance Co. has a deductible left
@@ -83,7 +83,7 @@ test("insured path: missing details get calm errors, and 'add this later' skips 
   await page.getByLabel("I'll add my insurance details later").check();
   await expect(page.getByLabel("Member ID")).toHaveCount(0);
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByText("Step 6 of 10 · Needs")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
 });
 
 test("self pay path: no insurance fields, straight on, self pay prices", async ({ page }) => {
@@ -127,7 +127,7 @@ test("flagged Medicare path: 'still not sure' continues", async ({ page }) => {
   await toInsurance(page, { ...ELIGIBLE, coverage: "Not sure" });
   await page.getByRole("group", { name: /Medicare, Medicaid, or a plan through either/ }).getByLabel("I'm still not sure").check();
   await choosePath(page, "I'll pay without insurance");
-  await expect(page.getByText("Step 6 of 10 · Needs")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
 });
 
 test("late exclusion: discovery returns a Medicaid plan after the patient answered No", async ({ page }) => {
