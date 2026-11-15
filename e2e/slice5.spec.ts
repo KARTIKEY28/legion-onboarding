@@ -6,7 +6,7 @@ async function seedAndOpenMatch(page: Page, answers: Record<string, unknown>) {
   await page.goto("/start");
   await page.evaluate((a) => sessionStorage.setItem("legion.answers", JSON.stringify(a)), answers);
   await page.goto("/match");
-  await expect(page.getByText("Step 7 of 10 · Match")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Match");
 }
 
 const STRONG = {

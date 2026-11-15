@@ -22,7 +22,7 @@ async function seedPayment(page: Page, answers: Record<string, unknown> = BOOKED
   await page.goto("/start");
   await page.evaluate((a) => sessionStorage.setItem("legion.answers", JSON.stringify(a)), answers);
   await page.goto("/payment");
-  await expect(page.getByText("Step 10 of 10 · Payment")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Payment");
 }
 
 async function fillCard(page: Page, number: string) {

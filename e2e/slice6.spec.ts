@@ -24,7 +24,7 @@ test("cost: the chosen clinician and time lead, Change links back to Match, Cont
   await seed(page, PICKED);
   await page.goto("/cost");
 
-  await expect(page.getByText("Step 8 of 10 · Cost and terms")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Cost and terms");
   const visit = page.getByRole("region", { name: "Review your visit" });
   await expect(visit).toContainText("Dr. Dana Whitfield");
   await expect(visit).toContainText("2:00 PM CT");
@@ -33,7 +33,7 @@ test("cost: the chosen clinician and time lead, Change links back to Match, Cont
   await expect(page).toHaveURL(/\/match$/);
 
   await page.goBack();
-  await expect(page.getByText("Step 8 of 10 · Cost and terms")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Cost and terms");
   // The old reviewer line is gone.
   await expect(page.getByText(/comes from a fixed price list/)).toHaveCount(0);
 
@@ -46,7 +46,7 @@ test("account: email is prefilled, DOB is read-only with Edit, no password, crea
   await seed(page, PICKED);
   await page.goto("/account");
 
-  await expect(page.getByText("Step 9 of 10 · Account")).toBeVisible();
+  await expect(page.getByTestId("progress-step")).toHaveText("Account");
   await expect(page.getByLabel("Email")).toHaveValue("patient@example.com");
   await expect(page.getByTestId("account-dob")).toHaveText("04/15/1990");
   await expect(page.getByRole("link", { name: "Edit" })).toHaveAttribute("href", "/about");

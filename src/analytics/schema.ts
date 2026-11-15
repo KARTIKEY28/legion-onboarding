@@ -58,8 +58,9 @@ export const EVENTS = {
   // About you and eligibility (replaces the old fit check screen)
   "about.viewed": event("about"),
   "about.submitted": event("about"),
-  // Fires on About you, and again on Insurance when "not sure" about coverage is confirmed there
-  "eligibility.checked": anyStepEvent(["about", "insurance"], {
+  // Fires on Start (location from ZIP), on About you, and again on Insurance when
+  // "not sure" about coverage is confirmed there
+  "eligibility.checked": anyStepEvent(["start", "about", "insurance"], {
     criterion: eligibilityCriterion,
     result: z.enum(["pass", "fail", "unconfirmed"]),
   }),

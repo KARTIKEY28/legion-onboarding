@@ -16,7 +16,9 @@ export type SafetyAnswer = "yes" | "no" | "rather_not_say";
  */
 export interface SessionAnswers {
   inTexas?: YesNo;
-  /** The patient's served state (first-class). Drives clinician licensing and the time zone. */
+  /** The patient's ZIP, collected first. Determines state, licensing and pricing geography. Never logged. */
+  zip?: string;
+  /** The patient's served state, derived from the ZIP. Drives clinician licensing and the time zone. */
   state?: UsState;
   /** Email left on the waitlist by a patient outside the served states. Never logged. */
   waitlistEmail?: string;

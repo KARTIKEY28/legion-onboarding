@@ -9,14 +9,12 @@ import { ActionBar, LoadingScreen, PrimaryButton, Progress, Screen, barPrimary }
 import {
   checkAge,
   checkCoverage,
-  checkLocation,
   dobProblem,
   parseDob,
   type CheckResult,
   type CoverageAnswer,
   type Criterion,
   type DateOfBirth,
-  type LocationAnswer,
 } from "@/eligibility";
 import { eligibility } from "@/facts";
 import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store";
@@ -50,9 +48,6 @@ export default function AboutPage() {
 function AboutForm({ initial }: { initial: SessionAnswers }) {
   const router = useRouter();
   const today = useRef(new Date()).current;
-  const [location, setLocation] = useState<LocationAnswer | undefined>(
-    initial.state ?? (initial.inTexas === "yes" ? "TX" : undefined),
-  );
   const [dob, setDob] = useState<string>(initial.dob ? maskedFromFields(initial.dob) : "");
   const [coverage, setCoverage] = useState<CoverageAnswer | undefined>(initial.coverage);
   const [dobTouched, setDobTouched] = useState(Boolean(initial.dob));
@@ -62,11 +57,6 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
   const dobResult = readDob(dob, today);
   const dobValid = typeof dobResult !== "string";
   const ageResult = dobValid ? checkAge(dobResult, today) : undefined;
-
-  function chooseLocation(value: LocationAnswer) {
-    setLocation(value);
-    recordCheck("texas", checkLocation(value));
-  }
 
   function changeDob(value: string) {
     setDob(value);
@@ -80,12 +70,10 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
   }
 
   const errors = {
-    texas: location ? undefined : "Please choose where you'll be so we know whether Legion can see you.",
     dob: dobValid ? undefined : DOB_MESSAGES[dobResult as keyof typeof DOB_MESSAGES],
     coverage: coverage ? undefined : "Please choose an answer. Not sure is fine.",
   };
   const shown = {
-    texas: submitted ? errors.texas : undefined,
     dob: submitted || (dobTouched && dobResult !== "incomplete") ? errors.dob : undefined,
     coverage: submitted ? errors.coverage : undefined,
   };
@@ -93,19 +81,16 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
   function submit(event: React.FormEvent) {
     event.preventDefault();
     setSubmitted(true);
-    if (errors.texas || errors.dob || errors.coverage) {
+    if (errors.dob || errors.coverage) {
       requestAnimationFrame(() => summaryRef.current?.focus());
       return;
     }
+    // Location was already decided from the ZIP on Start, so it is not asked again.
     const exclusions: Criterion[] = [];
-    if (checkLocation(location!) === "fail") exclusions.push("texas");
     if (ageResult === "fail") exclusions.push("age");
     if (checkCoverage(coverage!) === "fail") exclusions.push("coverage");
 
-    const served = location === "TX" || location === "UT";
     updateAnswers({
-      state: served ? location : undefined,
-      inTexas: location === "TX" ? "yes" : location === "other" ? "no" : undefined,
       dob: splitMaskedDob(dob),
       coverage,
       confirmCoverageAtInsurance: coverage === "unsure",
@@ -122,7 +107,7 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
       <Progress step="about" />
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">A little about you</h1>
-        <p className="text-ink-muted">Three quick questions to make sure we can care for you.</p>
+        <p className="text-ink-muted">Two quick questions to make sure we can care for you.</p>
       </div>
 
       {errorList.length > 0 && submitted && (
@@ -141,28 +126,6 @@ function AboutForm({ initial }: { initial: SessionAnswers }) {
       )}
 
       <form noValidate onSubmit={submit} className="flex flex-col gap-8">
-        <RadioQuestion
-          id="texas"
-          legend="Where will you be for your visits?"
-          reason="You need to be in the state your clinician is licensed in during each visit, so this sets who can see you."
-          options={[
-            { value: "TX", label: "Texas" },
-            { value: "UT", label: "Utah" },
-            { value: "other", label: "Not in Texas or Utah" },
-          ]}
-          value={location}
-          onChange={chooseLocation}
-          error={shown.texas}
-          note={
-            location === "other" && (
-              <ExclusionNote>
-                Legion sees patients in {eligibility.servedStates.value.join(" and ")} right now. When you continue,
-                we&apos;ll offer to let you know when we reach your state.
-              </ExclusionNote>
-            )
-          }
-        />
-
         <DobQuestion
           value={dob}
           onChange={changeDob}
