@@ -16,6 +16,18 @@ type Path = NonNullable<SessionAnswers["insurance"]>["path"];
 type CoverageAnswer = NonNullable<SessionAnswers["coverageAtInsurance"]>;
 const OTHER = "other";
 
+/**
+ * Where to go after Insurance. If "Add insurance" was tapped from a clinician
+ * profile, a `returnTo` query carries the profile URL so we come back there.
+ * Read lazily (at navigation time) so a soft client navigation's URL has
+ * settled; only an internal /match path is honoured (no open redirect).
+ */
+function readReturnTo(): string {
+  if (typeof window === "undefined") return "/match";
+  const raw = new URLSearchParams(window.location.search).get("returnTo");
+  return raw && raw.startsWith("/match") ? raw : "/match";
+}
+
 /** The rungs of the insured ladder (B): consent, then a discovery branch or the manual form. */
 type Rung = "consent" | "collect_name" | "looking_up" | "confirm_one" | "confirm_multi" | "manual" | "result";
 
@@ -227,7 +239,7 @@ function InsuranceForm({ answers }: { answers: SessionAnswers }) {
       });
       getTracker()("insurance.submitted", { path });
       getTracker()("insurance.cost_result", { result: "self_pay" });
-      router.push("/needs");
+      router.push(readReturnTo());
     }
   }
 
@@ -417,7 +429,7 @@ function InsuranceForm({ answers }: { answers: SessionAnswers }) {
         <CostResult
           result={costResult.result}
           line={estimateLine(costResult)}
-          onContinue={() => router.push("/needs")}
+          onContinue={() => router.push(readReturnTo())}
           onEdit={() => {
             setCostResult(null);
             setRung("manual");

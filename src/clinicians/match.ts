@@ -227,25 +227,18 @@ export function widenGains(input: MatchInput, now: Date): { any_time?: number; a
   return gains;
 }
 
-/** Builds the MatchInput from the patient's saved answers. */
+/** Builds the base MatchInput from the patient's saved answers. */
 export function matchInputFromAnswers(a: {
   state?: UsState;
   conditions?: { topics: TopicId[] };
-  needs?: { availability: AvailabilityWindow[]; language?: LanguageId; gender?: ClinicianGender };
-  insurance?: { path: string; payerId?: string };
 }): MatchInput {
-  // Only a known plan is a hard constraint. "Other" (an unlisted plan) and
-  // "add later" cannot be verified against the roster, so they filter nobody.
-  const payerId = a.insurance?.path === "insured" ? a.insurance.payerId : undefined;
-  const knownPayer = payerId && samplePayers.value.some((p) => p.id === payerId) ? payerId : undefined;
-  // Time of day is no longer a hard constraint at match time (it moved to a chip
-  // filter on the Match page), so windows are always empty here.
+  // All Legion clinicians are in network, so the plan is NOT a match filter: it
+  // sets the copay (shown as the cost estimate), never which clinicians appear.
+  // Time of day, language and gender are live filter chips on the Match page
+  // that can never empty the list, so they are not hard constraints here either.
   return {
     state: a.state ?? "TX",
     topics: a.conditions?.topics ?? [],
     windows: [],
-    language: a.needs?.language,
-    gender: a.needs?.gender,
-    payerId: knownPayer,
   };
 }

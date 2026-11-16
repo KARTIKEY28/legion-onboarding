@@ -20,9 +20,10 @@ import {
 } from "@/clinicians/match";
 import type { EvidenceTier } from "@/clinicians/match";
 import { nextSlots, openSlots, type Slot } from "@/clinicians/schedule";
-import { type AvailabilityWindow } from "@/clinicians/model";
+import { CLINICIAN_GENDERS, LANGUAGES, type AvailabilityWindow, type ClinicianGender, type LanguageId } from "@/clinicians/model";
 import { concernPhrase, joinPhrases, languagePhrase } from "@/data/phrases";
 import { estimateFromAnswers, estimateLine } from "@/data/estimate";
+import { SafeFreeText } from "@/components/safety";
 import { LoadingScreen, Progress, Screen, TextLink, secondaryClass } from "@/components/ui";
 import { formatInZone, type UsState } from "@/time";
 import { isWithinCancellationWindow, under48Line } from "@/payment/summary";
@@ -89,6 +90,9 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
   const estimate = useMemo(() => estimateFromAnswers(answers), [answers]);
 
   const [timeFilter, setTimeFilter] = useState<"any" | AvailabilityWindow>("any");
+  const [languageFilter, setLanguageFilter] = useState<"any" | LanguageId>(answers.needs?.language ?? "any");
+  const [genderFilter, setGenderFilter] = useState<"any" | ClinicianGender>(answers.needs?.gender ?? "any");
+  const [note, setNote] = useState(answers.needs?.note ?? "");
   const [noneSelected, setNoneSelected] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -96,14 +100,38 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
   const consumed = useRef(false);
   const [headline, setHeadline] = useState<Reflection | null>(null);
 
+  // Language and gender are live, soft filter chips (never a hard constraint),
+  // applied over the full pool alongside the time-of-day filter.
+  const filterInput: MatchInput = useMemo(
+    () => ({
+      ...baseInput,
+      language: languageFilter === "any" ? undefined : languageFilter,
+      gender: genderFilter === "any" ? undefined : genderFilter,
+    }),
+    [baseInput, languageFilter, genderFilter],
+  );
   const everyone = useMemo(() => allRanked(baseInput, now), [baseInput, now]);
-  const inWindow = useMemo(
-    () => (timeFilter === "any" ? everyone : everyone.filter((m) => openSlots(m.clinician, now, [timeFilter]).length > 0)),
-    [everyone, timeFilter, now],
+  const filtersActive = timeFilter !== "any" || languageFilter !== "any" || genderFilter !== "any";
+  const visible = useMemo(
+    () =>
+      everyone.filter(
+        (m) =>
+          (timeFilter === "any" || openSlots(m.clinician, now, [timeFilter]).length > 0) &&
+          (languageFilter === "any" || m.clinician.languages.includes(languageFilter)) &&
+          (genderFilter === "any" || m.clinician.gender === genderFilter),
+      ),
+    [everyone, timeFilter, languageFilter, genderFilter, now],
   );
   const noStrong = result.noStrongMatch || noneSelected;
-  const cards = showAll ? inWindow : inWindow.slice(0, 3);
-  const tooFew = timeFilter !== "any" && inWindow.length < 3;
+  const cards = showAll ? visible : visible.slice(0, 3);
+  const tooFew = filtersActive && visible.length < 3;
+
+  function resetFilters() {
+    setTimeFilter("any");
+    setLanguageFilter("any");
+    setGenderFilter("any");
+    setSelection(null);
+  }
 
   // match.viewed once.
   useEffect(() => {
@@ -149,9 +177,21 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
     if (searchParams.get("clinician")) router.back(); // close the profile if it was open
   }
 
+  function persistNeeds() {
+    updateAnswers({
+      needs: {
+        availability: [],
+        language: languageFilter === "any" ? undefined : languageFilter,
+        gender: genderFilter === "any" ? undefined : genderFilter,
+        note: note.trim() || undefined,
+      },
+    });
+  }
+
   function continueBooking() {
     if (!selection) return;
     const { match, slot, from, source, rank } = selection;
+    persistNeeds();
     updateAnswers({
       selectedClinician: { id: match.clinician.id, name: match.clinician.name },
       selectedSlot: { iso: slot.iso, label: formatInZone(slot.iso, baseInput.state) },
@@ -163,7 +203,25 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
   function changeTimeFilter(value: "any" | AvailabilityWindow) {
     setTimeFilter(value);
     setSelection(null);
-    getTracker()("match.time_filter_changed", { value });
+    getTracker()("match.filter_changed", { type: "time", value });
+  }
+
+  function changeLanguageFilter(value: "any" | LanguageId) {
+    setLanguageFilter(value);
+    setSelection(null);
+    getTracker()("match.filter_changed", { type: "language", value });
+  }
+
+  function changeGenderFilter(value: "any" | ClinicianGender) {
+    setGenderFilter(value);
+    setSelection(null);
+    getTracker()("match.filter_changed", { type: "gender", value });
+  }
+
+  /** Routes to Insurance to add a plan, returning to this profile afterward. */
+  function addInsurance(clinicianId: string) {
+    persistNeeds();
+    router.push(`/insurance?returnTo=${encodeURIComponent(`/match?clinician=${clinicianId}`)}`);
   }
 
   function openFullList() {
@@ -218,22 +276,46 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
         </p>
       </div>
 
-      {/* Time-of-day filter chips */}
-      <div role="group" aria-label="Filter by time of day" className="flex flex-wrap gap-2">
-        {TIME_CHIPS.map((chip) => (
-          <button
-            key={chip.id}
-            type="button"
-            aria-pressed={timeFilter === chip.id}
-            onClick={() => changeTimeFilter(chip.id)}
-            className={`min-h-11 rounded-full border px-4 py-2 text-base ${
-              timeFilter === chip.id ? "border-accent bg-accent-soft font-medium" : "border-line bg-surface"
-            }`}
-          >
-            {chip.label}
-          </button>
-        ))}
+      {/* Live filter chips: time, language, gender. None can empty the list. */}
+      <div className="flex flex-col gap-3">
+        <ChipRow label="Time" ariaLabel="Filter by time of day">
+          {TIME_CHIPS.map((chip) => (
+            <Chip key={chip.id} active={timeFilter === chip.id} onClick={() => changeTimeFilter(chip.id)}>
+              {chip.label}
+            </Chip>
+          ))}
+        </ChipRow>
+        <ChipRow label="Language" ariaLabel="Filter by language">
+          <Chip active={languageFilter === "any"} onClick={() => changeLanguageFilter("any")}>
+            No preference
+          </Chip>
+          {LANGUAGES.map((l) => (
+            <Chip key={l.id} active={languageFilter === l.id} onClick={() => changeLanguageFilter(l.id)}>
+              {l.label}
+            </Chip>
+          ))}
+        </ChipRow>
+        <ChipRow label="Gender" ariaLabel="Filter by clinician gender">
+          <Chip active={genderFilter === "any"} onClick={() => changeGenderFilter("any")}>
+            No preference
+          </Chip>
+          {CLINICIAN_GENDERS.map((g) => (
+            <Chip key={g.id} active={genderFilter === g.id} onClick={() => changeGenderFilter(g.id)}>
+              {g.label}
+            </Chip>
+          ))}
+        </ChipRow>
       </div>
+
+      {/* Optional note: still safety-checked (SafeFreeText escalates on its own), still feeds the pre-visit summary. */}
+      <SafeFreeText
+        id="match-note"
+        label="Anything else you want your clinician to know? (optional)"
+        hint="For example, something that would help you feel comfortable. Read by your care team, and used to draft your visit summary."
+        value={note}
+        onChange={setNote}
+        step="match"
+      />
 
       {noStrong && (
         <p role="status" className="rounded-md bg-accent-soft px-4 py-3">
@@ -244,9 +326,9 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
 
       {tooFew && (
         <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
-          Only a few clinicians have {TIME_CHIPS.find((c) => c.id === timeFilter)?.label.toLowerCase()} openings.
-          <button type="button" onClick={() => changeTimeFilter("any")} className="text-accent underline underline-offset-2">
-            Show any time
+          Only a few clinicians match these filters.
+          <button type="button" onClick={resetFilters} className="text-accent underline underline-offset-2">
+            Reset filters
           </button>
         </p>
       )}
@@ -276,7 +358,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
         <section aria-label="All clinicians" className="flex flex-col gap-4">
           <p className="text-ink-muted">All clinicians with openings, most relevant first.</p>
           <ul className="flex flex-col gap-4">
-            {inWindow.map((match, i) => (
+            {visible.map((match, i) => (
               <li key={match.clinician.id}>
                 <ClinicianCard
                   match={match}
@@ -315,7 +397,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
         </div>
       )}
 
-      <TextLink href="/needs">Back</TextLink>
+      <TextLink href="/insurance">Back</TextLink>
 
       {/* Extra space so the sticky confirm bar never hides the last control. */}
       {selection && <div aria-hidden className="h-40" />}
@@ -323,9 +405,11 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
       {openMatch && (
         <ClinicianProfile
           clinician={openMatch.clinician}
-          input={baseInput}
+          input={filterInput}
           now={now}
           estimate={estimateLine(estimate)}
+          hasInsurance={answers.insurance?.path === "insured"}
+          onAddInsurance={() => addInsurance(openMatch.clinician.id)}
           openedFrom={openMeta.current.source}
           onClose={closeProfile}
           onPick={(slot) =>
@@ -602,5 +686,33 @@ function NotifyMe({ initialEmail }: { initialEmail?: string }) {
         Email me
       </button>
     </form>
+  );
+}
+
+/** A labelled row of filter chips. */
+function ChipRow({ label, ariaLabel, children }: { label: string; ariaLabel: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="micro text-ink-muted">{label}</p>
+      <div role="group" aria-label={ariaLabel} className="flex flex-wrap gap-2">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** One filter chip. Live filter, never a hard constraint. */
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={`min-h-11 rounded-full border px-4 py-2 text-base ${
+        active ? "border-accent bg-accent-soft font-medium" : "border-line bg-surface"
+      }`}
+    >
+      {children}
+    </button>
   );
 }

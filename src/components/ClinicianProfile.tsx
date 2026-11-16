@@ -7,6 +7,7 @@ import type { Clinician } from "@/clinicians/model";
 import { profileContent, firstVisitLines } from "@/clinicians/profiles";
 import { ROLE_EXPLAINER, roleLabel, sampleCredentials } from "@/clinicians/roles";
 import { openSlots, type Slot } from "@/clinicians/schedule";
+import { secondaryClass } from "@/components/ui";
 import { concernPhrase, languagePhrase } from "@/data/phrases";
 import { samplePayers } from "@/facts";
 import { dayInZone, timeInZone, type UsState } from "@/time";
@@ -27,6 +28,8 @@ export function ClinicianProfile({
   input,
   now,
   estimate,
+  hasInsurance,
+  onAddInsurance,
   openedFrom,
   onClose,
   onPick,
@@ -34,8 +37,12 @@ export function ClinicianProfile({
   clinician: Clinician;
   input: MatchInput;
   now: Date;
-  /** The carried cost estimate line, shown in the profile so cost stays visible. */
+  /** The carried cost estimate line, shown in the booking area so cost stays visible. */
   estimate?: string;
+  /** Whether the patient has added insurance; drives the "Add insurance" action. */
+  hasInsurance?: boolean;
+  /** Routes to Insurance to add a plan, returning to this profile afterward. */
+  onAddInsurance?: () => void;
   /** What triggered the open; "more_times" scrolls to availability. */
   openedFrom?: "name" | "photo" | "more_times";
   onClose: () => void;
@@ -157,14 +164,6 @@ export function ClinicianProfile({
             </section>
           )}
 
-          {/* 3. Carried cost estimate */}
-          {estimate && (
-            <section className="flex flex-col gap-1 rounded-lg bg-surface p-4">
-              <h3 className="text-sm font-medium text-ink-muted">Your estimated cost</h3>
-              <p className="text-base">{estimate}</p>
-            </section>
-          )}
-
           {/* 4. About me (first-person, distinct per clinician) */}
           <section className="flex flex-col gap-2">
             <h3 className="text-lg font-semibold">About {firstName}</h3>
@@ -257,7 +256,21 @@ export function ClinicianProfile({
             </section>
           )}
 
-          {/* 11. Full availability */}
+          {/* 11. Booking area: carried cost estimate (and Add insurance if none yet) */}
+          <section aria-label="Your estimated cost" className="flex flex-col gap-2 rounded-lg bg-surface p-4">
+            <h3 className="text-sm font-medium text-ink-muted">Your estimated cost</h3>
+            {estimate && <p className="text-base">{estimate}</p>}
+            {!hasInsurance && onAddInsurance && (
+              <>
+                <p className="text-sm text-ink-muted">Have insurance? Add it to see your copay.</p>
+                <button type="button" onClick={onAddInsurance} className={`${secondaryClass} self-start`}>
+                  Add insurance
+                </button>
+              </>
+            )}
+          </section>
+
+          {/* 12. Full availability */}
           <section ref={availabilityRef} id="profile-availability" className="flex flex-col gap-3">
             <h3 className="text-lg font-semibold">Availability (next 2 weeks)</h3>
             {days.length === 0 ? (
