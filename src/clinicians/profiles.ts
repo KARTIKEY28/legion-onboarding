@@ -161,11 +161,10 @@ export function profileContent(id: string): ProfileContent {
  */
 export function firstVisitLines(clinician: Clinician): string[] {
   const first = clinician.name.split(" ")[0];
-  const med = clinician.role === "psychiatrist" ? "Dr." : first;
   return [
     `Your first visit is about 50 minutes, by video. ${first} will ask what brought you in and what you're hoping changes.`,
     "You'll talk through your history, your sleep, and anything you've tried before. There's nothing to prepare, and you can share as much or as little as you want.",
-    `If medication makes sense, ${med} will explain the options, the trade-offs, and what to watch for, and you decide together. Nothing is prescribed without your say.`,
+    `If medication makes sense, ${first} will explain the options, the trade-offs, and what to watch for, and you decide together. Nothing is prescribed without your say.`,
     "You'll leave with a clear next step and a plan to check in, so you're never left wondering what happens next.",
   ];
 }

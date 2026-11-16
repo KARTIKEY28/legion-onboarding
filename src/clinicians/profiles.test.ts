@@ -35,4 +35,12 @@ describe("clinician profile content", () => {
       expect(lines.join(" ")).toContain(c.name.split(" ")[0]);
     }
   });
+
+  it("leaves no unfilled 'Dr.' title placeholder in any first-visit copy", () => {
+    for (const c of CLINICIANS) {
+      // A bare "Dr." with no surname is an unfilled placeholder; the copy uses
+      // the clinician's first name instead.
+      expect(/\bDr\.(?!\s*[A-Z])/.test(firstVisitLines(c).join(" ")), `${c.id} first-visit copy`).toBe(false);
+    }
+  });
 });
