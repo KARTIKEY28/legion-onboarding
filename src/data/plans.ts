@@ -19,6 +19,8 @@ export interface PlanEligibility {
   coinsurance: number | null;
   /** A government program Legion can't accept: the plan is excluded, not costed. */
   program?: "medicaid" | "medicare";
+  /** A specialist copay for a plan that covers specialist visits but doesn't name behavioral health. */
+  specialistCopay?: number;
 }
 
 /** Synthetic, for prototype only. */
@@ -36,16 +38,19 @@ export const PLANS: Record<string, PlanEligibility> = {
   // A Medicaid plan: a government program Legion can't accept. Surfaced by the
   // coverage discovery at Insurance, which drives the late-exclusion path.
   sample_medicaid: { psychiatryCovered: false, copay: null, deductibleRemaining: null, coinsurance: null, program: "medicaid" },
+  // Covers specialist visits but doesn't name behavioral health: show the
+  // specialist copay and say psychiatry may differ, confirmed before the visit.
+  national_choice: { psychiatryCovered: false, copay: null, deductibleRemaining: null, coinsurance: null, specialistCopay: 40 },
 };
 
-export type EligibilityResult = "copay" | "deductible" | "not_covered" | "failed" | "self_pay";
+export type EligibilityResult = "copay" | "deductible" | "specialist" | "not_covered" | "failed" | "self_pay";
 
 /** The result type for a known plan, from its synthetic eligibility. */
 export function resultForPlan(payerId: string | undefined): EligibilityResult {
   if (!payerId) return "failed";
   const plan = PLANS[payerId];
   if (!plan) return "failed"; // unknown / "Other" plan: can't confirm
-  if (!plan.psychiatryCovered) return "not_covered";
+  if (!plan.psychiatryCovered) return plan.specialistCopay != null ? "specialist" : "not_covered";
   if (plan.copay != null) return "copay";
   if (plan.deductibleRemaining != null && plan.deductibleRemaining > 0) return "deductible";
   return "failed";
@@ -64,7 +69,7 @@ export function planLabel(payerId: string | undefined): string {
 export function planNumbers(): number[] {
   const nums: number[] = [];
   for (const plan of Object.values(PLANS)) {
-    for (const v of [plan.copay, plan.deductibleRemaining, plan.coinsurance]) {
+    for (const v of [plan.copay, plan.deductibleRemaining, plan.coinsurance, plan.specialistCopay]) {
       if (v != null) nums.push(v);
     }
   }

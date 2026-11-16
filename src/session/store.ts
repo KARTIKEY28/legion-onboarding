@@ -67,7 +67,7 @@ export interface SessionAnswers {
    */
   lateDiscovery?: { planLabel: string; program: "medicaid" | "medicare"; contradicted: boolean };
   /** The simulated eligibility/cost result from the Insurance step (synthetic, from plans.ts). */
-  eligibilityCost?: { result: "copay" | "deductible" | "not_covered" | "failed" | "self_pay"; payerId?: string };
+  eligibilityCost?: { result: "copay" | "deductible" | "specialist" | "not_covered" | "failed" | "self_pay"; payerId?: string };
   /** The clinician the patient picked on Match. */
   selectedClinician?: { id: string; name: string };
   /** The time the patient picked. iso is the slot; label is for display. */

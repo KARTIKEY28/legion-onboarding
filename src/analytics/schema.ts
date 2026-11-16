@@ -88,6 +88,23 @@ export const EVENTS = {
   "insurance.submitted": event("insurance", {
     path: z.enum(["insured", "self_pay", "not_sure"]),
   }),
+  // Discovery-first insurance. No names, IDs or amounts, ever: result types only.
+  "insurance.discovery_offered": event("insurance"),
+  "insurance.discovery_consented": event("insurance"),
+  "insurance.discovery_result": event("insurance", {
+    result: z.enum(["one_match", "multi_match", "no_match", "failed"]),
+  }),
+  "insurance.plan_confirmed": event("insurance", {
+    source: z.enum(["discovery", "manual"]),
+  }),
+  "insurance.plan_rejected": event("insurance"),
+  // Which rung of the ladder the patient reached: 1 consent, 2 picker, 3 manual.
+  "insurance.rung_reached": event("insurance", {
+    rung: z.number().int().min(1).max(3),
+  }),
+  "insurance.cost_result": event("insurance", {
+    result: z.enum(["copay", "deductible", "specialist", "not_covered", "failed", "self_pay"]),
+  }),
 
   // Needs
   "needs.viewed": event("needs"),

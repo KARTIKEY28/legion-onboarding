@@ -1,9 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ELIGIBLE, answerAbout, choosePath, events, setModel, startFlow, type Answers } from "./helpers";
+import { ELIGIBLE, answerAbout, choosePath, events, runDiscovery, setModel, startFlow, typeInsurance, type Answers } from "./helpers";
 
-// The personalized "What you pay" copy (Part 4). Prices come from the facts.
-// The pre-payment estimate lines (A1).
+// The personalized "What you pay" copy. Prices and copays come from the facts/plans.
 const SELF_PAY_EST = "$250 for your first visit, $150 for follow ups.";
+const COPAY_EST = "Your estimated cost per visit: $30 with Example Health Plan. We'll confirm before your visit.";
 const DEDUCTIBLE_EST =
   "Your plan has $500 left on your deductible, so your first visits may cost more until it's met. We'll confirm the exact amount before your visit.";
 
@@ -21,69 +21,87 @@ async function toCost(page: Page) {
   await expect(page.getByTestId("progress-step")).toHaveText("Needs");
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByTestId("progress-step")).toHaveText("Match");
-  // Pick the first open time on the top match, then confirm in the sticky bar.
   await page.getByRole("article").first().getByRole("button", { name: /AM|PM/ }).first().click();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByTestId("progress-step")).toHaveText("Cost and terms");
 }
 
-async function fillInsured(page: Page) {
+test("discovery-first: consent is shown, never a member-ID form by default", async ({ page }) => {
+  await toInsurance(page);
   await page.getByLabel("I have insurance", { exact: true }).check();
-  await page.getByLabel("Plan or insurer", { exact: true }).selectOption({ label: "Sample Insurance Co." });
-  await page.getByLabel("Member ID").fill("SYN-MEMBER-778899");
-  await page.getByLabel("Group ID (optional)").fill("SYN-GROUP-42");
-  await page.getByRole("button", { name: "Continue" }).click();
-}
+  // The default insured path is the consent prompt, not a manual form.
+  await expect(page.getByRole("heading", { name: "Want us to find your coverage?" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Find my coverage" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "I'll type it in" })).toBeVisible();
+  await expect(page.getByLabel("Member ID")).toHaveCount(0);
+});
 
-test("insured path: details are asked, nothing is verified, and the cost uses the insured wording", async ({ page }) => {
+test("discovery one-match: confirm, copay on Insurance, carried to Cost", async ({ page }) => {
   await setModel(page, "ok");
   await toInsurance(page);
-  await page.getByLabel("I have insurance", { exact: true }).check();
-  await expect(page.getByText(/your coverage is confirmed after you book/)).toBeVisible();
-  await fillInsured(page);
-  await toCost(page);
+  await runDiscovery(page, "Alex", "Rivera"); // -> Example Health Plan (copay $30)
 
-  await expect(page.getByTestId("cost-pay")).toHaveText(DEDUCTIBLE_EST); // Sample Insurance Co. has a deductible left
-  await expect(page.getByTestId("cost-pay")).toHaveAttribute("data-source", "personalized");
-  await expect(page.getByTestId("cost-charged")).toContainText("$1 authorization");
-  await expect(page.getByTestId("cost-cancel")).toContainText("48 hours");
-  await expect(page.getByRole("link", { name: "Continue to create your account" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Is this your plan?" })).toBeVisible();
+  await expect(page.getByText("Example Health Plan")).toBeVisible();
+  await page.getByRole("button", { name: "Yes, that's my plan" }).click();
+
+  // The copay is shown on the Insurance step, in network, before continuing.
+  await expect(page.getByText(COPAY_EST)).toBeVisible();
+  await expect(page.getByText(/All Legion clinicians are in network/)).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  // The copay is carried onto Cost and terms.
+  await toCost(page);
+  await expect(page.getByTestId("cost-pay")).toHaveText(COPAY_EST);
 
   const fired = await events(page);
-  const props = (name: string) => fired.filter((e) => e.event === name).map((e) => e.properties);
-  expect(props("insurance.viewed")).toHaveLength(1);
-  expect(props("insurance.submitted")).toEqual([{ path: "insured" }]);
-  expect(props("cost.viewed")).toEqual([{ insurance_path: "insured" }]);
-  expect(props("cost_summary.shown")).toEqual([{ source: "model" }]);
-  expect(props("cost_summary.validation_failed")).toEqual([]);
+  const types = (name: string) => fired.filter((e) => e.event === name).map((e) => e.properties);
+  expect(types("insurance.discovery_offered")).toHaveLength(1);
+  expect(types("insurance.discovery_consented")).toHaveLength(1);
+  expect(types("insurance.discovery_result")).toEqual([{ result: "one_match" }]);
+  expect(types("insurance.plan_confirmed")).toEqual([{ source: "discovery" }]);
+  expect(types("insurance.cost_result")).toEqual([{ result: "copay" }]);
 });
 
-test("insured path: a simulated eligibility check runs and reports a cost result type", async ({ page }) => {
-  await setModel(page, "fail");
+test("discovery one-match: a deductible plan shows the deductible wording", async ({ page }) => {
+  await toInsurance(page);
+  await runDiscovery(page, "Casey", "Nguyen"); // -> Sample Insurance Co. (deductible)
+  await page.getByRole("button", { name: "Yes, that's my plan" }).click();
+  await expect(page.getByText(DEDUCTIBLE_EST)).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
+  const checked = (await events(page)).filter((e) => e.event === "insurance.cost_result");
+  expect(checked.map((e) => e.properties)).toEqual([{ result: "deductible" }]);
+});
+
+test("manual fallback via 'I'll type it in' is first-class and produces a cost", async ({ page }) => {
+  await toInsurance(page);
+  await typeInsurance(page, "Sample Insurance Co.", "SYN-MEMBER-778899", "SYN-GROUP-42");
+  await expect(page.getByText(DEDUCTIBLE_EST)).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
+  const fired = await events(page);
+  expect(fired.filter((e) => e.event === "insurance.plan_confirmed").map((e) => e.properties)).toEqual([{ source: "manual" }]);
+  expect(fired.filter((e) => e.event === "insurance.rung_reached").map((e) => e.properties)).toContainEqual({ rung: 3 });
+});
+
+test("manual fallback: missing details get calm errors", async ({ page }) => {
   await toInsurance(page);
   await page.getByLabel("I have insurance", { exact: true }).check();
+  await page.getByRole("button", { name: "I'll type it in" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByText("Please choose your plan")).toBeVisible();
   await page.getByLabel("Plan or insurer", { exact: true }).selectOption({ label: "Sample Insurance Co." });
-  await page.getByLabel("Member ID").fill("SYN-MEMBER-778899");
   await page.getByRole("button", { name: "Continue" }).click();
-
-  await expect(page.getByText("Checking your coverage")).toBeVisible();
-  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
-
-  const checked = (await events(page)).filter((e) => e.event === "eligibility.checked_cost");
-  expect(checked.map((e) => e.properties)).toEqual([{ result: "deductible" }]); // Sample Insurance Co. has a deductible left
+  await expect(page.getByText("Please add your member ID. It's on the front of your card.")).toBeVisible();
 });
 
-test("insured path: missing details get calm errors, and 'add this later' skips them", async ({ page }) => {
+test("no match falls through to the manual form, not a dead end", async ({ page }) => {
   await toInsurance(page);
-  await page.getByLabel("I have insurance", { exact: true }).check();
-  await page.getByRole("button", { name: "Continue" }).click();
-  const summary = page.getByRole("alert").filter({ hasText: "still need a look" });
-  await expect(summary).toContainText("Please choose your plan");
-  await expect(summary).toContainText("Please add your member ID");
-  await page.getByLabel("I'll add my insurance details later").check();
-  await expect(page.getByLabel("Member ID")).toHaveCount(0);
-  await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
+  await runDiscovery(page, "Pat", "Morgan"); // -> no match
+  await expect(page.getByRole("heading", { name: "Enter your insurance" })).toBeVisible();
+  const fired = await events(page);
+  expect(fired.filter((e) => e.event === "insurance.discovery_result").map((e) => e.properties)).toEqual([{ result: "no_match" }]);
 });
 
 test("self pay path: no insurance fields, straight on, self pay prices", async ({ page }) => {
@@ -104,7 +122,6 @@ test("not sure path: continues, and the cost uses the insured wording", async ({
   await toInsurance(page);
   await choosePath(page, "I'm not sure yet");
   await toCost(page);
-  // Not sure (no check) shows the self-pay estimate.
   await expect(page.getByTestId("cost-pay")).toHaveText(SELF_PAY_EST);
   const submitted = (await events(page)).filter((e) => e.event === "insurance.submitted");
   expect(submitted.map((e) => e.properties)).toEqual([{ path: "not_sure" }]);
@@ -133,28 +150,20 @@ test("flagged Medicare path: 'still not sure' continues", async ({ page }) => {
 test("late exclusion: discovery returns a Medicaid plan after the patient answered No", async ({ page }) => {
   // ELIGIBLE answered "No" to Medicare/Medicaid on About you.
   await toInsurance(page);
-  await page.getByLabel("I have insurance", { exact: true }).check();
-  await page.getByLabel("Plan or insurer", { exact: true }).selectOption({ label: "Sample Medicaid Plan" });
-  await page.getByLabel("Member ID").fill("SYN-MEMBER-778899");
-  await page.getByRole("button", { name: "Continue" }).click();
+  await runDiscovery(page, "Sam", "Carter"); // -> Sample Medicaid Plan
+  await expect(page.getByRole("heading", { name: "Is this your plan?" })).toBeVisible();
+  await page.getByRole("button", { name: "Yes, that's my plan" }).click();
 
-  // The simulated coverage discovery runs, then lands on the late-exclusion screen.
   await expect(page.getByText("Checking your coverage")).toBeVisible();
   await expect(page).toHaveURL(/\/next-steps$/);
-
-  // It names the plan, says it is a Medicaid plan, and acknowledges the late, contradicting catch.
   await expect(page.getByRole("heading", { name: /Sample Medicaid Plan looks like a Medicaid plan/ })).toBeVisible();
   await expect(page.getByText(/Earlier you said you don't have Medicare or Medicaid/)).toBeVisible();
-  await expect(page.getByText(/Sample Medicaid Plan came back, and that's a Medicaid plan/)).toBeVisible();
-
-  // A real next step: the waitlist email and crisis resources are offered.
   await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
   await expect(page.getByRole("complementary", { name: "Crisis help" })).toBeVisible();
 
-  // No plan name or member id ever reaches an event.
   const fired = await events(page);
   const serialized = JSON.stringify(fired.map(({ event, step, properties }) => ({ event, step, properties })));
-  for (const forbidden of ["Sample Medicaid", "SYN-MEMBER", "778899", "medicaid"]) {
+  for (const forbidden of ["Sample Medicaid", "Carter", "MCD-", "7781204", "medicaid"]) {
     expect(serialized, `events must not contain "${forbidden}"`).not.toContain(forbidden);
   }
 });
@@ -164,7 +173,6 @@ test("a summary with an invented price is rejected and the template is shown", a
   await toInsurance(page);
   await choosePath(page, "I'm not sure yet");
   await toCost(page);
-  // The estimate line is unaffected; the rejected model summary (charged/cancel) falls back to the template.
   await expect(page.getByTestId("cost-pay")).toHaveText(SELF_PAY_EST);
   await expect(page.getByTestId("cost-charged")).toHaveAttribute("data-source", "template");
   await expect(page.getByText(/199/)).toHaveCount(0);
@@ -174,20 +182,18 @@ test("a summary with an invented price is rejected and the template is shown", a
   ]);
 });
 
-test("no event contains plan names, member or group IDs", async ({ page }) => {
+test("no event contains names, plan names, member or group IDs", async ({ page }) => {
   await setModel(page, "fail");
   await toInsurance(page);
-  await page.getByLabel("I have insurance", { exact: true }).check();
-  await page.getByLabel("Plan or insurer", { exact: true }).selectOption({ label: "Other" });
-  await page.getByLabel("Plan or insurer name").fill("Synthetic Mutual of Nowhere");
-  await page.getByLabel("Member ID").fill("SYN-MEMBER-778899");
-  await page.getByLabel("Group ID (optional)").fill("SYN-GROUP-42");
+  // Discovery (name + one match), then onward.
+  await runDiscovery(page, "Alex", "Rivera");
+  await page.getByRole("button", { name: "Yes, that's my plan" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
   await toCost(page);
 
   const fired = await events(page);
   const serialized = JSON.stringify(fired.map(({ event, step, device_type, properties }) => ({ event, step, device_type, properties })));
-  for (const forbidden of ["Synthetic Mutual", "SYN-MEMBER", "778899", "SYN-GROUP", "other", "Sample Insurance", "sample"]) {
+  for (const forbidden of ["Alex", "Rivera", "Example Health", "EH-", "4821960", "GRP-"]) {
     expect(serialized, `events must not contain "${forbidden}"`).not.toContain(forbidden);
   }
   for (const event of fired) {

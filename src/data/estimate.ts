@@ -34,6 +34,10 @@ export function estimateLine({ result, payerId }: CostEstimate): string {
       const left = PLANS[payerId ?? ""]?.deductibleRemaining ?? 0;
       return `Your plan has $${left} left on your deductible, so your first visits may cost more until it's met. We'll confirm the exact amount before your visit.`;
     }
+    case "specialist": {
+      const amount = PLANS[payerId ?? ""]?.specialistCopay ?? 0;
+      return `Your plan covers specialist visits at $${amount}. Psychiatry may differ, so we'll confirm before your visit.`;
+    }
     case "not_covered":
     case "failed":
       return `We couldn't confirm your coverage right now. We'll check before your visit. Without insurance, visits are $${initial} for the first and $${followUp} for follow ups.`;

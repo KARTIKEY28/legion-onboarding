@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ELIGIBLE, answerAbout, choosePath, pickTopic, setModel, startFlow } from "./helpers";
+import { ELIGIBLE, answerAbout, pickTopic, setModel, startFlow } from "./helpers";
 
 // The primary action must be reachable without scrolling on a small phone.
 test.use({ viewport: { width: 390, height: 844 }, isMobile: true });
@@ -25,8 +25,10 @@ test("the primary action is in the viewport at every step (390x844)", async ({ p
   await page.getByRole("button", { name: "Continue" }).click();
 
   await expect(page.getByTestId("progress-step")).toHaveText("Insurance");
+  // Choosing a path reveals the primary action, which must then be in view.
+  await page.getByLabel("I'll pay without insurance", { exact: true }).check();
   await expect(page.getByRole("button", { name: "Continue" })).toBeInViewport();
-  await choosePath(page, "I'll pay without insurance");
+  await page.getByRole("button", { name: "Continue" }).click();
 
   await expect(page.getByTestId("progress-step")).toHaveText("Needs");
   await expect(page.getByRole("button", { name: "Continue" })).toBeInViewport();

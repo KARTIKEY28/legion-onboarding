@@ -57,6 +57,25 @@ export async function choosePath(page: Page, label: "I have insurance" | "I'll p
   await page.getByRole("button", { name: "Continue" }).click();
 }
 
+/** Insured via discovery: consent -> collect name -> run the lookup. Lands on confirm or manual. */
+export async function runDiscovery(page: Page, first: string, last: string) {
+  await page.getByLabel("I have insurance", { exact: true }).check();
+  await page.getByRole("button", { name: "Find my coverage" }).click();
+  await page.getByLabel("First name").fill(first);
+  await page.getByLabel("Last name").fill(last);
+  await page.getByRole("button", { name: "Find my coverage" }).click();
+}
+
+/** Insured via the manual fallback ("I'll type it in"). */
+export async function typeInsurance(page: Page, plan: string, member?: string, group?: string) {
+  await page.getByLabel("I have insurance", { exact: true }).check();
+  await page.getByRole("button", { name: "I'll type it in" }).click();
+  await page.getByLabel("Plan or insurer", { exact: true }).selectOption({ label: plan });
+  if (member) await page.getByLabel("Member ID").fill(member);
+  if (group) await page.getByLabel("Group ID (optional)").fill(group);
+  await page.getByRole("button", { name: "Continue" }).click();
+}
+
 /** The test-only model stand-in reads this cookie: ok, fail, slow, or invalid (an invented price). */
 export async function setModel(page: Page, mode: "ok" | "fail" | "slow" | "invalid") {
   await page.context().addCookies([{ name: "ai_mock", value: mode, url: "http://localhost:3100" }]);
