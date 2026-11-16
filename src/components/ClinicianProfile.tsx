@@ -218,7 +218,15 @@ export function ClinicianProfile({
             </div>
           </section>
 
-          {/* 8. Languages and plans */}
+          {/* 8. Cultural background (when the clinician offers it) */}
+          {clinician.culturalBackground && (
+            <section className="flex flex-col gap-2">
+              <h3 className="text-lg font-semibold">Cultural background</h3>
+              <p className="text-sm">{clinician.culturalBackground}</p>
+            </section>
+          )}
+
+          {/* 9. Languages and plans */}
           <section className="flex flex-col gap-2">
             <h3 className="text-lg font-semibold">Languages and plans</h3>
             <p className="text-sm">

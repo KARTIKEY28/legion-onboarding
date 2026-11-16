@@ -52,6 +52,12 @@ export interface Clinician {
   acceptedPayers: string[];
   /** A short first-person line, shown as written by the clinician. */
   bio: string;
+  /**
+   * A self-described cultural background and bilingual care, when the clinician
+   * offers it. Used for the "understands my culture" search path: it matches on
+   * the clinician's own stated background and languages, never on patient race.
+   */
+  culturalBackground?: string;
   /** Evidence tiers 2 and 3. Always labeled illustrative in the prototype. */
   experience?: { similarPatients: number; illustrative: true };
   outcomes?: { measure: string; cohortSize: number; improvedShare: number; illustrative: true };

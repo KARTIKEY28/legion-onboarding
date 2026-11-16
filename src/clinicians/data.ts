@@ -96,6 +96,7 @@ export const CLINICIANS: Clinician[] = [
     availability: ["weekday_afternoons", "weekday_evenings"],
     acceptedPayers: ["example_health", "demo_care", "placeholder_health"],
     bio: "I sit with low moods, sleep and hard past experiences, in English or Spanish, without rushing. Hard feelings are welcome here; we take them one at a time.",
+    culturalBackground: "Mexican-American, and I offer fully bilingual care in English and Spanish.",
     experience: { similarPatients: 120, illustrative: true },
     outcomes: { measure: OUTCOME_MEASURE, cohortSize: 41, improvedShare: 0.73, illustrative: true },
   },
@@ -190,6 +191,7 @@ export const CLINICIANS: Clinician[] = [
     availability: ["weekday_mornings", "weekday_afternoons", "weekday_evenings"],
     acceptedPayers: ["sample_insurance", "placeholder_health"],
     bio: "I help with mood, hard past experiences and panic, in English or Spanish, at a pace that feels right.",
+    culturalBackground: "Colombian-American, and my visits are available in English or Spanish.",
     experience: { similarPatients: 160, illustrative: true },
     // Cohort below the minimum, so tier 3 is not shown; kept to exercise that rule.
     outcomes: { measure: OUTCOME_MEASURE, cohortSize: 22, improvedShare: 0.77, illustrative: true },

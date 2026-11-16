@@ -167,6 +167,52 @@ test("profile booking panel: carried cost, then Add insurance round-trips back t
   await expect(dialog.getByRole("button", { name: "Add insurance" })).toHaveCount(0);
 });
 
+test("search box: an example maps phrases to filters, shown as removable chips, with a clean event", async ({ page }) => {
+  await setModel(page, "fail");
+  await seedAndOpenMatch(page, STRONG);
+
+  await page.getByRole("button", { name: "A Spanish-speaking clinician for depression and ADHD" }).click();
+
+  // The parsed filters show as removable chips (language + the two conditions).
+  const applied = page.getByRole("group", { name: "Applied filters" });
+  await expect(applied.getByRole("button", { name: /Remove filter Spanish/ })).toBeVisible();
+  await expect(applied.getByRole("button", { name: /Remove filter low mood/ })).toBeVisible();
+  await expect(applied.getByRole("button", { name: /Remove filter focus and attention/ })).toBeVisible();
+
+  // The event carries only the fixed filter tokens, never the free text.
+  const used = (await events(page)).filter((e) => e.event === "match.search_used");
+  expect(used).toHaveLength(1);
+  expect(used[0].properties.filters_applied).toEqual(expect.arrayContaining(["es", "low_mood", "focus"]));
+  const serialized = JSON.stringify(used);
+  for (const forbidden of ["Spanish-speaking", "depression", "ADHD"]) expect(serialized).not.toContain(forbidden);
+
+  // A chip is removable.
+  await applied.getByRole("button", { name: /Remove filter Spanish/ }).click();
+  await expect(applied.getByRole("button", { name: /Remove filter Spanish/ })).toHaveCount(0);
+});
+
+test("search box: the cultural path matches a clinician with a stated background, never by race", async ({ page }) => {
+  await setModel(page, "fail");
+  await seedAndOpenMatch(page, STRONG);
+  await page.getByRole("button", { name: "A Latina clinician who understands my culture" }).click();
+
+  await expect(page.getByRole("group", { name: "Applied filters" }).getByRole("button", { name: /Shared cultural background/ })).toBeVisible();
+  // At least one clinician remains, and their profile states a cultural background.
+  await page.getByRole("article").first().getByRole("button", { name: /Open .* profile/ }).click();
+  await expect(page.getByRole("dialog").getByRole("heading", { name: "Cultural background" })).toBeVisible();
+});
+
+test("search box: an unrecognised phrase applies nothing, shows everyone, never errors", async ({ page }) => {
+  await setModel(page, "fail");
+  await seedAndOpenMatch(page, STRONG);
+  await page.getByLabel(/Describe what you're looking for/).fill("someone kind and patient");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(page.getByText(/Showing everyone\. Refine with the filters above\./)).toBeVisible();
+  await expect(page.getByRole("article")).toHaveCount(3);
+  const used = (await events(page)).filter((e) => e.event === "match.search_used");
+  expect(used[0].properties.filters_applied).toEqual([]);
+});
+
 test("clinician profile: the role explainer avoids prescribing claims", async ({ page }) => {
   await setModel(page, "fail");
   await seedAndOpenMatch(page, STRONG);
