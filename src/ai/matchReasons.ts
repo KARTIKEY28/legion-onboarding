@@ -75,20 +75,25 @@ export function profileExperienceLine(c: Clinician): string | null {
   return `Illustrative: has worked with about ${c.experience.similarPatients} patients with concerns like these.`;
 }
 
-/** The card reasons, expanded to one full sentence each, for the profile. */
-export function profileReasons(facts: MatchReasonFacts): string[] {
+/**
+ * The card reasons, expanded to one full sentence each, for the profile. Each
+ * ties one of the patient's own answers to this clinician. Pass the clinician's
+ * first name to make the sentences read about them, not a generic "they".
+ */
+export function profileReasons(facts: MatchReasonFacts, name?: string): string[] {
+  const who = name ?? "They";
   const out: string[] = [];
   if (facts.matchedTopicIds.length) {
     out.push(
-      `They focus on ${joinPhrases(facts.matchedTopicIds.map((id) => concernPhrase[id]))}, which you told us about.`,
+      `${who} focuses on ${joinPhrases(facts.matchedTopicIds.map((id) => concernPhrase[id]))}, which you told us about.`,
     );
   }
   if (facts.windows.length) {
-    out.push(`They have ${joinPhrases(facts.windows.map((w) => windowWord[w]))} openings, matching when you're free.`);
+    out.push(`${who} has ${joinPhrases(facts.windows.map((w) => windowWord[w]))} openings, matching when you're free.`);
   }
-  if (facts.payer) out.push(`They take ${facts.payer}, the plan you gave us.`);
-  if (facts.language) out.push(`They speak ${languagePhrase[facts.language]}, the language you asked for.`);
-  if (facts.gender) out.push(`They're ${genderPhrase[facts.gender]}, which you preferred.`);
+  if (facts.payer) out.push(`${who} takes ${facts.payer}, the plan you gave us.`);
+  if (facts.language) out.push(`${who} speaks ${languagePhrase[facts.language]}, the language you asked for.`);
+  if (facts.gender) out.push(`${who} is ${genderPhrase[facts.gender]}, which you preferred.`);
   return out;
 }
 
