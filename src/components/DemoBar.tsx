@@ -46,11 +46,14 @@ function fillDemoPatient() {
   updateAnswers({
     inTexas: "yes",
     state: "TX",
+    zip: "78701",
     dob: { month: "03", day: "14", year: "1992" },
     conditions: { topics: ["low_mood", "worry"], unsure: false, skipped: false },
     safety: { recentThoughts: "no" },
     needs: { availability: ["weekday_mornings"] },
-    insurance: { path: "insured", payerId: "sample_insurance", memberId: "SAMPLE123" },
+    // Matches what discovery returns for "Alex Rivera": Example Health Plan, copay $30.
+    insurance: { path: "insured", payerId: "example_health", memberId: "EH-4821960", groupId: "GRP-0355" },
+    eligibilityCost: { result: "copay", payerId: "example_health" },
     notifyEmail: "alex.rivera@example.com",
     patient: { firstName: "Alex", lastName: "Rivera", phone: "(555) 010-0142" },
     selectedClinician: { id: "c1", name: "Dana Whitfield" },
