@@ -18,10 +18,9 @@ const payerLabel = (id: string) => samplePayers.value.find((p) => p.id === id)?.
 const STATE_NAME: Record<UsState, string> = { TX: "Texas", UT: "Utah" };
 
 /**
- * The clinician profile: a full-screen sheet on mobile, a side drawer on
- * desktop. Esc and the browser Back button close it (the URL carries
- * ?clinician=id, so it is shareable and restorable). Picking a time here
- * behaves exactly like picking one on the card.
+ * The clinician profile body, rendered as a full page at /clinician/[id].
+ * All the trust-building content plus the full 14-day availability. Picking a
+ * time here behaves exactly like picking one on the card.
  */
 export function ClinicianProfile({
   clinician,
@@ -30,8 +29,7 @@ export function ClinicianProfile({
   estimate,
   hasInsurance,
   onAddInsurance,
-  openedFrom,
-  onClose,
+  deepLinkAvailability,
   onPick,
 }: {
   clinician: Clinician;
@@ -43,12 +41,10 @@ export function ClinicianProfile({
   hasInsurance?: boolean;
   /** Routes to Insurance to add a plan, returning to this profile afterward. */
   onAddInsurance?: () => void;
-  /** What triggered the open; "more_times" scrolls to availability. */
-  openedFrom?: "name" | "photo" | "more_times";
-  onClose: () => void;
+  /** When true (opened via "More times"), scroll to availability on mount. */
+  deepLinkAvailability?: boolean;
   onPick: (slot: Slot) => void;
 }) {
-  const panelRef = useRef<HTMLDivElement>(null);
   const availabilityRef = useRef<HTMLElement>(null);
   const [showRole, setShowRole] = useState(false);
   const firstName = clinician.name.split(" ")[0];
@@ -62,70 +58,25 @@ export function ClinicianProfile({
   // Availability grouped by the patient's-zone day, chosen windows first within a day.
   const days = useMemo(() => groupByDay(openSlots(clinician, now), input.windows, input.state), [clinician, now, input.windows, input.state]);
 
-  // Opened from "More times": bring availability into view.
+  // Deep-linked to availability (from "More times"): bring it into view.
   useEffect(() => {
-    if (openedFrom === "more_times") {
+    if (deepLinkAvailability) {
       const t = setTimeout(() => availabilityRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
       return () => clearTimeout(t);
     }
-  }, [openedFrom]);
-
-  // Focus trap + Escape.
-  useEffect(() => {
-    const panel = panelRef.current;
-    panel?.focus();
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (e.key !== "Tab" || !panel) return;
-      const focusable = panel.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])',
-      );
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [deepLinkAvailability]);
 
   const plans = clinician.acceptedPayers.map(payerLabel);
   const languages = clinician.languages.map((l) => languagePhrase[l]);
   const focusAreas = clinician.specialties.map((id) => concernPhrase[id]);
 
   return (
-    <div className="fixed inset-0 z-50 flex bg-ink/40 sm:justify-end" role="presentation" onClick={onClose}>
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${clinician.name}, profile`}
-        tabIndex={-1}
-        onClick={(e) => e.stopPropagation()}
-        className="flex h-full w-full flex-col overflow-y-auto bg-canvas outline-none sm:max-w-md sm:border-l sm:border-line"
-      >
-        <div className="sticky top-0 flex items-center justify-between border-b border-line bg-canvas px-4 py-3">
-          <p className="text-sm font-medium text-ink-muted">Clinician profile</p>
-          <button type="button" onClick={onClose} className="min-h-11 px-2 text-accent underline underline-offset-2">
-            Close
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-6 px-4 py-6">
+    <div className="flex flex-col gap-6">
           {/* 1. Identity */}
           <section className="flex items-start gap-4">
             <Portrait id={clinician.id} name={clinician.name} size={72} />
             <div className="flex flex-col gap-0.5">
-              <h2 className="text-xl font-semibold">{clinician.name}</h2>
+              <h1 className="text-2xl font-semibold">{clinician.name}</h1>
               {clinician.pronouns && <p className="text-sm text-ink-muted">{clinician.pronouns}</p>}
               <p className="flex flex-wrap items-center gap-2 text-sm">
                 {roleLabel[clinician.role]}
@@ -303,8 +254,6 @@ export function ClinicianProfile({
               ))
             )}
           </section>
-        </div>
-      </div>
     </div>
   );
 }

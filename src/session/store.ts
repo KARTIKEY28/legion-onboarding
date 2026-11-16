@@ -68,6 +68,21 @@ export interface SessionAnswers {
   lateDiscovery?: { planLabel: string; program: "medicaid" | "medicare"; contradicted: boolean };
   /** The simulated eligibility/cost result from the Insurance step (synthetic, from plans.ts). */
   eligibilityCost?: { result: "copay" | "deductible" | "specialist" | "not_covered" | "failed" | "self_pay"; payerId?: string };
+  /**
+   * The Match filter state and scroll position, saved when leaving to a
+   * clinician page so "Back to matches" restores the patient's place (the 37%
+   * cliff). Never logged.
+   */
+  matchFilters?: {
+    time: AvailabilityWindow | "any";
+    language: LanguageId | "any";
+    gender: ClinicianGender | "any";
+    topics: TopicId[];
+    cultural: boolean;
+    /** Whether the full "See all clinicians" list was open. */
+    showAll?: boolean;
+    scrollY?: number;
+  };
   /** The clinician the patient picked on Match. */
   selectedClinician?: { id: string; name: string };
   /** The time the patient picked. iso is the slot; label is for display. */

@@ -1,10 +1,10 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getTracker } from "@/analytics/client";
 import { trackOnce } from "@/analytics/hooks";
-import { ClinicianProfile } from "@/components/ClinicianProfile";
+import { ConfirmBar } from "@/components/ConfirmBar";
 import { Portrait } from "@/components/Portrait";
 import { roleLabel } from "@/clinicians/roles";
 import { cardEvidenceLine } from "@/ai/matchReasons";
@@ -35,8 +35,6 @@ import { updateAnswers, useAnswers, type SessionAnswers } from "@/session/store"
 const tierKey = (e: EvidenceTier) => (e.tier === 3 ? "outcomes" : e.tier === 2 ? "experience" : "declared_fit");
 
 const CLIENT_TIMEOUT_MS = 3000;
-const DEV_LABEL = process.env.NEXT_PUBLIC_SHOW_DEV_LABEL === "1";
-
 /** Tappable example searches, so the demo path is reliable. Each parses to real filters. */
 const SEARCH_EXAMPLES = [
   "A Spanish-speaking clinician for depression and ADHD",
@@ -92,22 +90,25 @@ function MatchGate() {
 
 function MatchView({ answers }: { answers: SessionAnswers }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const now = useRef(new Date()).current;
   const baseInput = useMemo(() => matchInputFromAnswers(answers), [answers]);
   const result = useMemo(() => matchClinicians(baseInput, now), [baseInput, now]);
   const estimate = useMemo(() => estimateFromAnswers(answers), [answers]);
 
-  const [timeFilter, setTimeFilter] = useState<"any" | AvailabilityWindow>("any");
-  const [languageFilter, setLanguageFilter] = useState<"any" | LanguageId>(answers.needs?.language ?? "any");
-  const [genderFilter, setGenderFilter] = useState<"any" | ClinicianGender>(answers.needs?.gender ?? "any");
+  // Restore the filters (and later the scroll) saved when the patient left to a
+  // clinician page, so "Back to matches" keeps their place. Falls back to the
+  // language/gender they gave earlier.
+  const saved = answers.matchFilters;
+  const [timeFilter, setTimeFilter] = useState<"any" | AvailabilityWindow>(saved?.time ?? "any");
+  const [languageFilter, setLanguageFilter] = useState<"any" | LanguageId>(saved?.language ?? answers.needs?.language ?? "any");
+  const [genderFilter, setGenderFilter] = useState<"any" | ClinicianGender>(saved?.gender ?? answers.needs?.gender ?? "any");
   // Filters that only the search box sets: conditions and a shared cultural background.
-  const [topicFilters, setTopicFilters] = useState<TopicId[]>([]);
-  const [culturalFilter, setCulturalFilter] = useState(false);
+  const [topicFilters, setTopicFilters] = useState<TopicId[]>(saved?.topics ?? []);
+  const [culturalFilter, setCulturalFilter] = useState(saved?.cultural ?? false);
   const [note, setNote] = useState(answers.needs?.note ?? "");
   const [searched, setSearched] = useState(false);
   const [noneSelected, setNoneSelected] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+  const [showAll, setShowAll] = useState(saved?.showAll ?? false);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [takenFor, setTakenFor] = useState<string | null>(null);
   const consumed = useRef(false);
@@ -115,14 +116,6 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
 
   // Language and gender are live, soft filter chips (never a hard constraint),
   // applied over the full pool alongside the time-of-day filter.
-  const filterInput: MatchInput = useMemo(
-    () => ({
-      ...baseInput,
-      language: languageFilter === "any" ? undefined : languageFilter,
-      gender: genderFilter === "any" ? undefined : genderFilter,
-    }),
-    [baseInput, languageFilter, genderFilter],
-  );
   const everyone = useMemo(() => allRanked(baseInput, now), [baseInput, now]);
   const filtersActive =
     timeFilter !== "any" || languageFilter !== "any" || genderFilter !== "any" || topicFilters.length > 0 || culturalFilter;
@@ -236,7 +229,6 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
     }
     setSelection({ match, slot, from, rank, source });
     getTracker()("slot.selected");
-    if (searchParams.get("clinician")) router.back(); // close the profile if it was open
   }
 
   function persistNeeds() {
@@ -280,10 +272,24 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
     getTracker()("match.filter_changed", { type: "gender", value });
   }
 
-  /** Routes to Insurance to add a plan, returning to this profile afterward. */
-  function addInsurance(clinicianId: string) {
+  // Saves the live filters and scroll position, then opens the full clinician
+  // page. "Back to matches" restores this exact place (the 37% cliff).
+  type OpenSource = "name" | "photo" | "more_times";
+  function goToProfile(id: string, from: "card" | "full_list", rank: number, source: OpenSource) {
     persistNeeds();
-    router.push(`/insurance?returnTo=${encodeURIComponent(`/match?clinician=${clinicianId}`)}`);
+    updateAnswers({
+      matchFilters: {
+        time: timeFilter,
+        language: languageFilter,
+        gender: genderFilter,
+        topics: topicFilters,
+        cultural: culturalFilter,
+        showAll,
+        scrollY: typeof window !== "undefined" ? window.scrollY : 0,
+      },
+    });
+    const hash = source === "more_times" ? "#availability" : "";
+    router.push(`/clinician/${id}?from=${from}&source=${source}&rank=${rank}${hash}`);
   }
 
   function openFullList() {
@@ -297,29 +303,18 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
     setShowAll(false);
   }
 
-  // Profile sheet, driven by the URL (?clinician=id).
-  const openId = searchParams.get("clinician");
-  type OpenSource = "name" | "photo" | "more_times";
-  const openMeta = useRef<{ from: "card" | "full_list"; rank: number; source: OpenSource }>({ from: "card", rank: 0, source: "name" });
-  const firedProfile = useRef<string | null>(null);
-  const openMatch = useMemo(
-    () => (openId ? everyone.find((m) => m.clinician.id === openId) ?? null : null),
-    [openId, everyone],
-  );
-  function openProfile(id: string, from: "card" | "full_list", rank: number, source: OpenSource) {
-    openMeta.current = { from, rank, source };
-    router.push(`/match?clinician=${id}`, { scroll: false });
-  }
-  function closeProfile() {
-    router.back();
-  }
+  // Returning from a clinician page: restore the saved scroll position once, so
+  // the patient lands back where they left off.
+  const restored = useRef(false);
   useEffect(() => {
-    if (openId && firedProfile.current !== openId) {
-      firedProfile.current = openId;
-      getTracker()("profile.opened", { from: openMeta.current.from, source: openMeta.current.source, rank: openMeta.current.rank });
+    if (restored.current) return;
+    restored.current = true;
+    const y = saved?.scrollY;
+    if (typeof y === "number" && y > 0) {
+      requestAnimationFrame(() => window.scrollTo(0, y));
     }
-    if (!openId) firedProfile.current = null;
-  }, [openId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <Screen>
@@ -467,7 +462,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
                 taken={takenFor === match.clinician.id}
                 state={baseInput.state}
                 onPick={(slot) => select(match, slot, "top_match", i + 1, "card")}
-                onOpenProfile={(source) => openProfile(match.clinician.id, "card", i + 1, source)}
+                onOpenProfile={(source) => goToProfile(match.clinician.id, "card", i + 1, source)}
                 onChooseAnother={() => setTakenFor(null)}
               />
             </li>
@@ -490,7 +485,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
                   taken={takenFor === match.clinician.id}
                   state={baseInput.state}
                   onPick={(slot) => select(match, slot, "full_list", i + 1, "card")}
-                  onOpenProfile={(source) => openProfile(match.clinician.id, "full_list", i + 1, source)}
+                  onOpenProfile={(source) => goToProfile(match.clinician.id, "full_list", i + 1, source)}
                   onChooseAnother={() => setTakenFor(null)}
                 />
               </li>
@@ -523,31 +518,10 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
       {/* Extra space so the sticky confirm bar never hides the last control. */}
       {selection && <div aria-hidden className="h-40" />}
 
-      {openMatch && (
-        <ClinicianProfile
-          clinician={openMatch.clinician}
-          input={filterInput}
-          now={now}
-          estimate={estimateLine(estimate)}
-          hasInsurance={answers.insurance?.path === "insured"}
-          onAddInsurance={() => addInsurance(openMatch.clinician.id)}
-          openedFrom={openMeta.current.source}
-          onClose={closeProfile}
-          onPick={(slot) =>
-            select(
-              openMatch,
-              slot,
-              openMeta.current.from === "full_list" ? "full_list" : "top_match",
-              openMeta.current.rank || 1,
-              "profile",
-            )
-          }
-        />
-      )}
-
       {selection && (
         <ConfirmBar
-          selection={selection}
+          clinician={selection.match.clinician}
+          slotIso={selection.slot.iso}
           estimate={estimateLine(estimate)}
           under48={isWithinCancellationWindow(selection.slot.iso, now) ? under48Line() : null}
           state={baseInput.state}
@@ -555,46 +529,6 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
         />
       )}
     </Screen>
-  );
-}
-
-function ConfirmBar({
-  selection,
-  estimate,
-  under48,
-  state,
-  onContinue,
-}: {
-  selection: Selection;
-  estimate: string;
-  under48: string | null;
-  state: UsState;
-  onContinue: () => void;
-}) {
-  const { clinician } = selection.match;
-  return (
-    <div
-      className="fixed inset-x-0 z-40 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur"
-      style={{ bottom: DEV_LABEL ? 52 : 0 }}
-    >
-      <div className="mx-auto flex w-full max-w-xl items-center gap-3">
-        <Portrait id={clinician.id} name={clinician.name} size={40} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <p className="truncate text-sm font-medium">
-            {clinician.name} · {formatInZone(selection.slot.iso, state)}
-          </p>
-          <p className="truncate text-xs text-ink-muted">{estimate}</p>
-          {under48 && <p className="truncate text-xs font-medium text-ink">{under48}</p>}
-        </div>
-        <button
-          type="button"
-          onClick={onContinue}
-          className="min-h-11 shrink-0 rounded-full bg-accent px-6 py-2 text-base font-medium text-accent-ink hover:bg-accent-dark"
-        >
-          Continue
-        </button>
-      </div>
-    </div>
   );
 }
 
