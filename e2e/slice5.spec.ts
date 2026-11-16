@@ -242,6 +242,86 @@ test("clinician profile: picking a time there selects from the profile", async (
   expect(selected[0].properties.source).toBe("profile");
 });
 
+// Opens the first clinician's profile page from a seeded Match list.
+async function openFirstProfile(page: Page) {
+  await seedAndOpenMatch(page, STRONG);
+  await page.getByRole("article").first().getByRole("button", { name: /Open .* profile/ }).click();
+  await expect(page).toHaveURL(/\/clinician\/[\w-]+/);
+}
+
+test("intro call: opens from the profile, submit shows the simulated confirmation, nothing network-sends", async ({ page }) => {
+  await setModel(page, "fail");
+  await openFirstProfile(page);
+
+  // Track any network send during submit; the request is simulated, so none should fire.
+  const posts: string[] = [];
+  page.on("request", (r) => {
+    if (r.method() === "POST") posts.push(r.url());
+  });
+
+  await page.getByRole("button", { name: "Not ready to book? Request a free intro call" }).click();
+  const sheet = page.getByRole("dialog", { name: "Request a free intro call" });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByTestId("proposal-label")).toBeVisible(); // design-proposal tag
+
+  // Pick a reason and a preferred time.
+  await sheet.getByRole("checkbox", { name: "Ask about medication" }).check();
+  await sheet.getByRole("button", { name: /AM|PM/ }).first().click();
+
+  // Contact is collected once (no email seeded).
+  await sheet.getByLabel("First name").fill("Alex");
+  await sheet.getByLabel("Last name").fill("Rivera");
+  await sheet.getByLabel("Email").fill("alex@example.com");
+
+  await sheet.getByRole("button", { name: "Send request" }).click();
+
+  // Confirmation, clearly a prototype, naming the email.
+  await expect(page.getByText("will reply to alex@example.com to confirm a time.")).toBeVisible();
+  await expect(page.getByText(/nothing is actually sent/i)).toBeVisible();
+  expect(posts).toEqual([]); // nothing network-sent
+
+  // The event carries only the fixed tokens and a count — never the note, name or email.
+  const requested = (await events(page)).filter((e) => e.event === "intro_call.requested");
+  expect(requested).toHaveLength(1);
+  expect(requested[0].properties).toEqual({ reasons: ["medication"], slots_count: 1 });
+  const serialized = JSON.stringify(await events(page));
+  for (const pii of ["Alex", "Rivera", "alex@example.com"]) expect(serialized).not.toContain(pii);
+
+  // Back to the profile.
+  await page.getByRole("button", { name: /Back to .*profile/ }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Availability (next 2 weeks)" })).toBeVisible();
+});
+
+test("intro call: closing returns to the same scroll position on the profile", async ({ page }) => {
+  await setModel(page, "fail");
+  await openFirstProfile(page);
+
+  // Scroll the entry point into view, then record where we are.
+  await page.getByRole("button", { name: "Not ready to book? Request a free intro call" }).scrollIntoViewIfNeeded();
+  const before = await page.evaluate(() => window.scrollY);
+  expect(before).toBeGreaterThan(100);
+
+  await page.getByRole("button", { name: "Not ready to book? Request a free intro call" }).click();
+  await expect(page.getByRole("dialog", { name: "Request a free intro call" })).toBeVisible();
+  await page.getByRole("button", { name: "Close" }).click();
+
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before);
+});
+
+test("intro call: a crisis phrase in the note triggers the help panel, never blocks", async ({ page }) => {
+  await setModel(page, "fail"); // model down, so the local check is what fires
+  await openFirstProfile(page);
+
+  await page.getByRole("button", { name: "Not ready to book? Request a free intro call" }).click();
+  const sheet = page.getByRole("dialog", { name: "Request a free intro call" });
+  await sheet.getByLabel(/Anything you'd like them to know/).fill("I want to end my life");
+
+  await expect(sheet.getByText("Trained counselors are available any time.")).toBeVisible();
+  // Help never blocks: the request action is still there.
+  await expect(sheet.getByRole("button", { name: "Send request" })).toBeVisible();
+});
+
 test("back to matches: filters and scroll position are preserved (the 37% cliff)", async ({ page }) => {
   await setModel(page, "fail");
   await seedAndOpenMatch(page, STRONG);
