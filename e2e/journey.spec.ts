@@ -20,10 +20,8 @@ test("Start to Visit complete: the full funnel reaches the primary outcome", asy
   await page.getByRole("button", { name: "Continue" }).click();
 
   await choosePath(page, "I'll pay without insurance");
-  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
-  await page.getByRole("button", { name: "Continue" }).click();
 
-  // Match → Cost → Account
+  // Insurance goes straight to Match (Needs is gone). Match → Cost → Account.
   await expect(page).toHaveURL(/\/match$/);
   await page.getByRole("article").first().getByRole("button", { name: /AM|PM/ }).first().click();
   await page.getByRole("button", { name: "Continue" }).click(); // confirm in the sticky bar

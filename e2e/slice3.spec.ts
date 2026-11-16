@@ -7,17 +7,15 @@ async function toConditions(page: Page) {
   await expect(page.getByRole("heading", { name: "What's been on your mind?" })).toBeVisible();
 }
 
-async function finishSafetyAndNeeds(page: Page) {
+/** Safety (no), then Insurance self-pay, arriving straight on Match (Needs is gone). */
+async function finishSafety(page: Page) {
   await page.getByRole("group", { name: /thoughts of ending your life/ }).getByLabel("No", { exact: true }).check();
   await page.getByRole("button", { name: "Continue" }).click();
   await choosePath(page, "I'll pay without insurance");
-  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
-  await page.getByRole("group", { name: /Language/ }).getByLabel("Spanish", { exact: true }).check();
-  await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/match$/);
 }
 
-test("happy path: Conditions, Safety and Needs record clean events", async ({ page }) => {
+test("happy path: Conditions and Safety record clean events", async ({ page }) => {
   await setModel(page, "ok");
   await toConditions(page);
   await expect(page.getByTestId("progress-step")).toHaveText("Conditions");
@@ -26,7 +24,7 @@ test("happy path: Conditions, Safety and Needs record clean events", async ({ pa
   await page.getByRole("button", { name: "Continue" }).click();
 
   await expect(page.getByTestId("progress-step")).toHaveText("Safety");
-  await finishSafetyAndNeeds(page);
+  await finishSafety(page);
 
   const fired = await events(page);
   const byName = (name: string) => fired.filter((e) => e.event === name);
@@ -39,11 +37,6 @@ test("happy path: Conditions, Safety and Needs record clean events", async ({ pa
   expect(byName("safety.viewed")).toHaveLength(1);
   expect(byName("safety.submitted")).toHaveLength(1);
   expect(byName("safety.escalated")).toHaveLength(0);
-  expect(byName("needs.submitted")[0].properties).toEqual({
-    answered_language: true,
-    answered_gender: false,
-    free_text_used: false,
-  });
 });
 
 test("a crisis phrase in free text opens help at once and never blocks", async ({ page }) => {
@@ -109,7 +102,7 @@ test("model unavailable: the flow still continues to the match step", async ({ p
   await pickTopic(page, "Trouble sleeping");
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByTestId("progress-step")).toHaveText("Safety");
-  await finishSafetyAndNeeds(page);
+  await finishSafety(page);
   await expect(page).toHaveURL(/\/match$/);
 });
 
@@ -126,9 +119,12 @@ test("no event contains free text, health answers or identifiers", async ({ page
   await page.getByRole("group", { name: /hospital/ }).getByLabel("Yes", { exact: true }).check();
   await page.getByRole("button", { name: "Continue" }).click();
   await choosePath(page, "I'll pay without insurance");
-  await page.getByLabel(/Anything else you want your clinician to know/).fill(note);
-  await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/match$/);
+  // The "anything else" note now lives on Match, still safety-checked, never logged.
+  await page.getByLabel(/Anything else you want your clinician to know/).fill(note);
+  await page.getByRole("article").first().getByRole("button", { name: /AM|PM/ }).first().click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page).toHaveURL(/\/cost$/);
 
   const fired = await events(page);
   const serialized = JSON.stringify(fired.map(({ event, step, device_type, properties }) => ({ event, step, device_type, properties })));

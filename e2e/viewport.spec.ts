@@ -30,11 +30,7 @@ test("the primary action is in the viewport at every step (390x844)", async ({ p
   await expect(page.getByRole("button", { name: "Continue" })).toBeInViewport();
   await page.getByRole("button", { name: "Continue" }).click();
 
-  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
-  await expect(page.getByRole("button", { name: "Continue" })).toBeInViewport();
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  // Match is a selection list: pick the first open time, then the sticky bar's Continue is in view.
+  // Insurance goes straight to Match (Needs is gone). Pick a time; the sticky Continue is in view.
   await expect(page).toHaveURL(/\/match$/);
   await page.getByRole("article").first().getByRole("button", { name: /AM|PM/ }).first().click();
   await expect(page.getByRole("button", { name: "Continue" })).toBeInViewport();
@@ -66,7 +62,6 @@ const PAGES = [
   "/conditions",
   "/safety",
   "/insurance",
-  "/needs",
   "/match",
   "/cost",
   "/account",

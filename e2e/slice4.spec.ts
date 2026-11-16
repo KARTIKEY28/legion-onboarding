@@ -16,10 +16,8 @@ async function toInsurance(page: Page, about: Answers = ELIGIBLE) {
   await expect(page.getByTestId("progress-step")).toHaveText("Insurance");
 }
 
-/** Needs, then the Match stub, arriving on Cost and terms. */
+/** From Match (reached straight after Insurance), pick a time and reach Cost and terms. */
 async function toCost(page: Page) {
-  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
-  await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByTestId("progress-step")).toHaveText("Match");
   await page.getByRole("article").first().getByRole("button", { name: /AM|PM/ }).first().click();
   await page.getByRole("button", { name: "Continue" }).click();
@@ -69,7 +67,7 @@ test("discovery one-match: a deductible plan shows the deductible wording", asyn
   await page.getByRole("button", { name: "Yes, that's my plan" }).click();
   await expect(page.getByText(DEDUCTIBLE_EST)).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
+  await expect(page.getByTestId("progress-step")).toHaveText("Match");
   const checked = (await events(page)).filter((e) => e.event === "insurance.cost_result");
   expect(checked.map((e) => e.properties)).toEqual([{ result: "deductible" }]);
 });
@@ -79,7 +77,7 @@ test("manual fallback via 'I'll type it in' is first-class and produces a cost",
   await typeInsurance(page, "Sample Insurance Co.", "SYN-MEMBER-778899", "SYN-GROUP-42");
   await expect(page.getByText(DEDUCTIBLE_EST)).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
+  await expect(page.getByTestId("progress-step")).toHaveText("Match");
   const fired = await events(page);
   expect(fired.filter((e) => e.event === "insurance.plan_confirmed").map((e) => e.properties)).toEqual([{ source: "manual" }]);
   expect(fired.filter((e) => e.event === "insurance.rung_reached").map((e) => e.properties)).toContainEqual({ rung: 3 });
@@ -144,7 +142,7 @@ test("flagged Medicare path: 'still not sure' continues", async ({ page }) => {
   await toInsurance(page, { ...ELIGIBLE, coverage: "Not sure" });
   await page.getByRole("group", { name: /Medicare, Medicaid, or a plan through either/ }).getByLabel("I'm still not sure").check();
   await choosePath(page, "I'll pay without insurance");
-  await expect(page.getByTestId("progress-step")).toHaveText("Needs");
+  await expect(page.getByTestId("progress-step")).toHaveText("Match");
 });
 
 test("late exclusion: discovery returns a Medicaid plan after the patient answered No", async ({ page }) => {

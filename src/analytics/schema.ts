@@ -106,15 +106,6 @@ export const EVENTS = {
     result: z.enum(["copay", "deductible", "specialist", "not_covered", "failed", "self_pay"]),
   }),
 
-  // Needs
-  "needs.viewed": event("needs"),
-  // Which fields were answered, never their values
-  "needs.submitted": event("needs", {
-    answered_language: z.boolean(),
-    answered_gender: z.boolean(),
-    free_text_used: z.boolean(),
-  }),
-
   // Match
   "match.viewed": event("match", {
     match_count: count,
@@ -122,9 +113,11 @@ export const EVENTS = {
   }),
   "match.full_list_opened": event("match"),
   "match.none_selected": event("match"),
-  // The time-of-day filter chip changed (value only).
-  "match.time_filter_changed": event("match", {
-    value: z.enum(["any", "weekday_mornings", "weekday_afternoons", "weekday_evenings", "weekends"]),
+  // A filter chip changed. Time, language and gender are live chips on Match
+  // (the Needs step is gone). Type and value only, never free text.
+  "match.filter_changed": event("match", {
+    type: z.enum(["time", "language", "gender"]),
+    value: z.enum(["any", "weekday_mornings", "weekday_afternoons", "weekday_evenings", "weekends", "en", "es", "woman", "man", "nonbinary"]),
   }),
   // A time was tapped on a card or in the profile (selection, not yet confirmed).
   "slot.selected": event("match"),
@@ -205,7 +198,7 @@ export const EVENTS = {
   // Cross-cutting
   // The crisis panel expanded. Source: a direct safety-question answer, the local
   // free-text check, or the model. Never carries the answer or the text.
-  "safety.escalated": anyStepEvent(["conditions", "safety", "needs"], {
+  "safety.escalated": anyStepEvent(["conditions", "safety", "match"], {
     source: z.enum(["answer", "local", "model"]),
   }),
   // Reserved for a patient-opened crisis panel (a "get help now" button); not fired yet

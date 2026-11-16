@@ -51,7 +51,7 @@ function fillDemoPatient() {
     conditions: { topics: ["low_mood", "worry"], unsure: false, skipped: false },
     safety: { recentThoughts: "no" },
     needs: { availability: ["weekday_mornings"] },
-    // Matches what discovery returns for "Alex Rivera": Example Health Plan, copay $30.
+    // Matches what discovery returns for "Alex Rivera": Example Health Plan, a copay plan.
     insurance: { path: "insured", payerId: "example_health", memberId: "EH-4821960", groupId: "GRP-0355" },
     eligibilityCost: { result: "copay", payerId: "example_health" },
     notifyEmail: "alex.rivera@example.com",

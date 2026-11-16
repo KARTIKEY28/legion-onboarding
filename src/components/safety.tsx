@@ -5,7 +5,7 @@ import { trackOnce } from "@/analytics/hooks";
 import { crisisResources } from "@/facts";
 import { localSafetyCheck } from "@/safety/local";
 
-type SafetyStep = "conditions" | "safety" | "needs";
+type SafetyStep = "conditions" | "safety" | "match";
 
 const CRISIS_CHAT_URL = "https://988lifeline.org/chat/";
 

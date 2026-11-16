@@ -62,16 +62,24 @@ test("the headline no longer mentions time windows", async ({ page }) => {
   await expect(page.getByTestId("match-headline")).toContainText("Clinicians who work with low mood and ongoing worry.");
 });
 
-test("time chips filter the list and fire match.time_filter_changed", async ({ page }) => {
+test("filter chips (time, language, gender) filter the list and fire match.filter_changed", async ({ page }) => {
   await setModel(page, "fail");
   await seedAndOpenMatch(page, STRONG);
+
   await page.getByRole("button", { name: "Mornings", exact: true }).click();
-  expect((await events(page)).filter((e) => e.event === "match.time_filter_changed").map((e) => e.properties)).toEqual([
-    { value: "weekday_mornings" },
+  await expect(page.getByRole("article").first()).toContainText("Mornings openings"); // window, not "Next opening"
+
+  // Language and gender are live chips too, grouped by their own controls.
+  await page.getByRole("group", { name: "Filter by language" }).getByRole("button", { name: "Spanish", exact: true }).click();
+  await page.getByRole("group", { name: "Filter by clinician gender" }).getByRole("button", { name: "Man", exact: true }).click();
+
+  expect((await events(page)).filter((e) => e.event === "match.filter_changed").map((e) => e.properties)).toEqual([
+    { type: "time", value: "weekday_mornings" },
+    { type: "language", value: "es" },
+    { type: "gender", value: "man" },
   ]);
+  // Chips never empty the list: a reset is always offered if fewer than 3 remain.
   await expect(page.getByRole("article").first()).toBeVisible();
-  // The card's time reason is now the window, not "Next opening".
-  await expect(page.getByRole("article").first()).toContainText("Mornings openings");
 });
 
 test("'None of these feel right' shows the no-strong-match state and fires the event", async ({ page }) => {
@@ -96,20 +104,21 @@ test("'See all clinicians' opens the full list and selecting fires from full_lis
   expect(selected[0].properties.from).toBe("full_list");
 });
 
-test("no strong match: a language with no matching clinician shows the closest options and notify", async ({ page }) => {
+test("language and gender chips are soft: they never dead-end, a reset is always offered", async ({ page }) => {
   await setModel(page, "fail");
-  // Worry + Spanish: no Spanish-speaking clinician works with worry, so no strong match.
-  await seedAndOpenMatch(page, {
-    inTexas: "yes",
-    state: "TX",
-    conditions: { topics: ["worry"], unsure: false, skipped: false },
-    needs: { language: "es" },
-    insurance: { path: "self_pay" },
-  });
+  await seedAndOpenMatch(page, STRONG);
 
-  await expect(page.getByText(/couldn't find a clinician who fits everything/)).toBeVisible();
-  expect((await events(page)).filter((e) => e.event === "match.viewed")[0].properties.no_strong_match).toBe(true);
-  await expect(page.getByRole("button", { name: /Tell me when more openings/ })).toBeVisible();
+  // A restrictive combo (Spanish + Woman) narrows below three, but never empties:
+  // the matching clinicians stay and a one-tap reset appears.
+  await page.getByRole("group", { name: "Filter by language" }).getByRole("button", { name: "Spanish", exact: true }).click();
+  await page.getByRole("group", { name: "Filter by clinician gender" }).getByRole("button", { name: "Woman", exact: true }).click();
+
+  await expect(page.getByRole("button", { name: "Reset filters" })).toBeVisible();
+  await expect(page.getByRole("article").first()).toBeVisible();
+
+  // Reset brings the full set back.
+  await page.getByRole("button", { name: "Reset filters" }).click();
+  await expect(page.getByRole("article")).toHaveCount(3);
 });
 
 test("clinician profile: opens from the card, reflects in the URL, Escape closes it", async ({ page }) => {
@@ -129,6 +138,33 @@ test("clinician profile: opens from the card, reflects in the URL, Escape closes
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(page).not.toHaveURL(/\?clinician=/);
+});
+
+test("profile booking panel: carried cost, then Add insurance round-trips back to the profile", async ({ page }) => {
+  await setModel(page, "ok");
+  await seedAndOpenMatch(page, STRONG); // self-pay, no insurance yet
+
+  const open = () => page.getByRole("article").first().getByRole("button", { name: /Open .* profile/ }).click();
+  await open();
+  const dialog = page.getByRole("dialog");
+  // Self-pay: booking area shows the self-pay estimate and an Add insurance action.
+  await expect(dialog.getByText("$250 for your first visit, $150 for follow ups.")).toBeVisible();
+  await dialog.getByRole("button", { name: "Add insurance" }).click();
+
+  // Routes to Insurance, carrying a return to this clinician's profile.
+  await expect(page).toHaveURL(/\/insurance\?returnTo=/);
+  await page.getByLabel("I have insurance", { exact: true }).check();
+  await page.getByRole("button", { name: "Find my coverage" }).click();
+  await page.getByLabel("First name").fill("Alex");
+  await page.getByLabel("Last name").fill("Rivera");
+  await page.getByRole("button", { name: "Find my coverage" }).click();
+  await page.getByRole("button", { name: "Yes, that's my plan" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  // Back on the same clinician's profile, now showing the copay and no Add insurance.
+  await expect(page).toHaveURL(/\/match\?clinician=/);
+  await expect(dialog.getByText("Your estimated cost per visit: $30 with Example Health Plan. We'll confirm before your visit.")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Add insurance" })).toHaveCount(0);
 });
 
 test("clinician profile: the role explainer avoids prescribing claims", async ({ page }) => {
