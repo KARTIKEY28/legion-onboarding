@@ -20,12 +20,13 @@ const OTHER = "other";
  * Where to go after Insurance. If "Add insurance" was tapped from a clinician
  * profile, a `returnTo` query carries the profile URL so we come back there.
  * Read lazily (at navigation time) so a soft client navigation's URL has
- * settled; only an internal /match path is honoured (no open redirect).
+ * settled; only an internal /match or /clinician path is honoured (no open
+ * redirect).
  */
 function readReturnTo(): string {
   if (typeof window === "undefined") return "/match";
   const raw = new URLSearchParams(window.location.search).get("returnTo");
-  return raw && raw.startsWith("/match") ? raw : "/match";
+  return raw && (raw.startsWith("/match") || raw.startsWith("/clinician/")) ? raw : "/match";
 }
 
 /** The rungs of the insured ladder (B): consent, then a discovery branch or the manual form. */

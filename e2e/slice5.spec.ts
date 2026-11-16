@@ -121,35 +121,35 @@ test("language and gender chips are soft: they never dead-end, a reset is always
   await expect(page.getByRole("article")).toHaveCount(3);
 });
 
-test("clinician profile: opens from the card, reflects in the URL, Escape closes it", async ({ page }) => {
+test("clinician profile: opens as its own page, and browser back returns to the match list", async ({ page }) => {
   await setModel(page, "fail");
   await seedAndOpenMatch(page, STRONG);
 
   const card = page.getByRole("article").first();
   await card.getByRole("button", { name: /Open .* profile/ }).click();
 
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("Why we matched you");
-  await expect(dialog).toContainText("Availability");
-  await expect(page).toHaveURL(/\?clinician=/);
+  // A full page at /clinician/[id], not a drawer.
+  await expect(page).toHaveURL(/\/clinician\/[\w-]+/);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByText("Why we matched you")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Availability (next 2 weeks)" })).toBeVisible();
   expect((await events(page)).filter((e) => e.event === "profile.opened")).toHaveLength(1);
 
-  await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
-  await expect(page).not.toHaveURL(/\?clinician=/);
+  // Browser back returns to the match list, inside the flow.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/match$/);
+  await expect(page.getByRole("article").first()).toBeVisible();
 });
 
 test("profile booking panel: carried cost, then Add insurance round-trips back to the profile", async ({ page }) => {
   await setModel(page, "ok");
   await seedAndOpenMatch(page, STRONG); // self-pay, no insurance yet
 
-  const open = () => page.getByRole("article").first().getByRole("button", { name: /Open .* profile/ }).click();
-  await open();
-  const dialog = page.getByRole("dialog");
+  await page.getByRole("article").first().getByRole("button", { name: /Open .* profile/ }).click();
+  await expect(page).toHaveURL(/\/clinician\/[\w-]+/);
   // Self-pay: booking area shows the self-pay estimate and an Add insurance action.
-  await expect(dialog.getByText("$250 for your first visit, $150 for follow ups.")).toBeVisible();
-  await dialog.getByRole("button", { name: "Add insurance" }).click();
+  await expect(page.getByText("$250 for your first visit, $150 for follow ups.")).toBeVisible();
+  await page.getByRole("button", { name: "Add insurance" }).click();
 
   // Routes to Insurance, carrying a return to this clinician's profile.
   await expect(page).toHaveURL(/\/insurance\?returnTo=/);
@@ -161,10 +161,10 @@ test("profile booking panel: carried cost, then Add insurance round-trips back t
   await page.getByRole("button", { name: "Yes, that's my plan" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
 
-  // Back on the same clinician's profile, now showing the copay and no Add insurance.
-  await expect(page).toHaveURL(/\/match\?clinician=/);
-  await expect(dialog.getByText("Your estimated cost per visit: $30 with Example Health Plan. We'll confirm before your visit.")).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "Add insurance" })).toHaveCount(0);
+  // Back on the same clinician's page, now showing the copay and no Add insurance.
+  await expect(page).toHaveURL(/\/clinician\/[\w-]+/);
+  await expect(page.getByText("Your estimated cost per visit: $30 with Example Health Plan. We'll confirm before your visit.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add insurance" })).toHaveCount(0);
 });
 
 test("search box: an example maps phrases to filters, shown as removable chips, with a clean event", async ({ page }) => {
@@ -199,7 +199,8 @@ test("search box: the cultural path matches a clinician with a stated background
   await expect(page.getByRole("group", { name: "Applied filters" }).getByRole("button", { name: /Shared cultural background/ })).toBeVisible();
   // At least one clinician remains, and their profile states a cultural background.
   await page.getByRole("article").first().getByRole("button", { name: /Open .* profile/ }).click();
-  await expect(page.getByRole("dialog").getByRole("heading", { name: "Cultural background" })).toBeVisible();
+  await expect(page).toHaveURL(/\/clinician\/[\w-]+/);
+  await expect(page.getByRole("heading", { name: "Cultural background" })).toBeVisible();
 });
 
 test("search box: an unrecognised phrase applies nothing, shows everyone, never errors", async ({ page }) => {
@@ -217,6 +218,7 @@ test("clinician profile: the role explainer avoids prescribing claims", async ({
   await setModel(page, "fail");
   await seedAndOpenMatch(page, STRONG);
   await page.getByRole("article").first().getByRole("button", { name: /Open .* profile/ }).click();
+  await expect(page).toHaveURL(/\/clinician\/[\w-]+/);
   await page.getByRole("button", { name: "What's the difference?" }).click();
   const explainer = page.getByText(/medical doctor who specializes in mental health/);
   await expect(explainer).toBeVisible();
@@ -227,17 +229,39 @@ test("clinician profile: picking a time there selects from the profile", async (
   await setModel(page, "fail");
   await seedAndOpenMatch(page, STRONG);
   await page.getByRole("article").first().getByRole("button", { name: /Open .* profile/ }).click();
+  await expect(page).toHaveURL(/\/clinician\/[\w-]+/);
 
-  const dialog = page.getByRole("dialog");
-  await dialog.getByRole("button", { name: /AM|PM/ }).first().click();
-  // The profile closes and the sticky confirm bar appears.
-  await expect(dialog).toBeHidden();
+  // Picking a time on the profile page shows the sticky confirm bar, as on the card.
+  await page.getByRole("heading", { name: "Availability (next 2 weeks)" }).scrollIntoViewIfNeeded();
+  await page.getByRole("button", { name: /AM|PM/ }).first().click();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/cost$/);
 
   const selected = (await events(page)).filter((e) => e.event === "provider.selected");
   expect(selected).toHaveLength(1);
   expect(selected[0].properties.source).toBe("profile");
+});
+
+test("back to matches: filters and scroll position are preserved (the 37% cliff)", async ({ page }) => {
+  await setModel(page, "fail");
+  await seedAndOpenMatch(page, STRONG);
+
+  // Apply a filter, then open the full list so the page is tall enough to scroll.
+  await page.getByRole("group", { name: "Filter by language" }).getByRole("button", { name: "Spanish", exact: true }).click();
+  await page.getByRole("button", { name: "See all clinicians" }).click();
+  await page.evaluate(() => window.scrollTo(0, 500));
+  const scrollBefore = await page.evaluate(() => window.scrollY);
+  expect(scrollBefore).toBeGreaterThan(100);
+
+  // Open a profile, then come back.
+  await page.getByRole("article").first().getByRole("button", { name: /Open .* profile/ }).click();
+  await expect(page).toHaveURL(/\/clinician\/[\w-]+/);
+  await page.getByRole("button", { name: "← Back to matches" }).click();
+  await expect(page).toHaveURL(/\/match$/);
+
+  // The Spanish filter is still applied and the scroll position is restored.
+  await expect(page.getByRole("group", { name: "Applied filters" }).getByRole("button", { name: /Spanish/ })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
 });
 
 test("slot taken at booking: a calm message, the event fires, and a retry works", async ({ page }) => {
