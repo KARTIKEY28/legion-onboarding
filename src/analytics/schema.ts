@@ -119,6 +119,32 @@ export const EVENTS = {
     type: z.enum(["time", "language", "gender"]),
     value: z.enum(["any", "weekday_mornings", "weekday_afternoons", "weekday_evenings", "weekends", "en", "es", "woman", "man", "nonbinary"]),
   }),
+  // The search box ran. Only the fixed filter tokens it mapped to, never the
+  // free text the patient typed and never PII.
+  "match.search_used": event("match", {
+    filters_applied: z.array(
+      z.enum([
+        "low_mood",
+        "worry",
+        "panic",
+        "mood_swings",
+        "focus",
+        "sleep",
+        "past_events",
+        "unwanted_thoughts",
+        "en",
+        "es",
+        "woman",
+        "man",
+        "nonbinary",
+        "weekday_mornings",
+        "weekday_afternoons",
+        "weekday_evenings",
+        "weekends",
+        "cultural",
+      ]),
+    ),
+  }),
   // A time was tapped on a card or in the profile (selection, not yet confirmed).
   "slot.selected": event("match"),
   // Opening a clinician profile; rank, where it was opened from, and what was
@@ -225,7 +251,11 @@ export const envelopeSchema = z
     step: z.enum(STEPS),
     device_type: z.enum(DEVICE_TYPES),
     timestamp: z.string().datetime(),
-    properties: z.record(z.union([z.string(), z.number(), z.boolean()])),
+    // Scalars, or a bounded array of scalars (e.g. match.search_used.filters_applied).
+    // The per-event schemas constrain these to enums, so free text can never reach here.
+    properties: z.record(
+      z.union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number(), z.boolean()]))]),
+    ),
   })
   .strict();
 

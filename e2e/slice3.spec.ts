@@ -120,8 +120,8 @@ test("no event contains free text, health answers or identifiers", async ({ page
   await page.getByRole("button", { name: "Continue" }).click();
   await choosePath(page, "I'll pay without insurance");
   await expect(page).toHaveURL(/\/match$/);
-  // The "anything else" note now lives on Match, still safety-checked, never logged.
-  await page.getByLabel(/Anything else you want your clinician to know/).fill(note);
+  // The free-text note now lives in the Match search box, still safety-checked, never logged.
+  await page.getByLabel(/Describe what you're looking for/).fill(note);
   await page.getByRole("article").first().getByRole("button", { name: /AM|PM/ }).first().click();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/cost$/);

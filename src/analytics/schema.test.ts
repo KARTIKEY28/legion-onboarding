@@ -52,12 +52,13 @@ describe("event catalog", () => {
     expect(Object.keys(EVENTS)).toEqual(expect.arrayContaining(required));
   });
 
-  it("only allows enums, numbers and booleans, so free text can never be sent", () => {
+  it("only allows enums, numbers, booleans, or arrays of enums, so free text can never be sent", () => {
+    const isScalar = (f: unknown) => f instanceof z.ZodEnum || f instanceof z.ZodNumber || f instanceof z.ZodBoolean;
     for (const [name, definition] of Object.entries(EVENTS)) {
       for (const [key, field] of Object.entries(definition.properties.shape)) {
-        const allowed =
-          field instanceof z.ZodEnum || field instanceof z.ZodNumber || field instanceof z.ZodBoolean;
-        expect(allowed, `${name}.${key} must be an enum, number or boolean`).toBe(true);
+        // A bounded array of enum tokens is allowed (e.g. match.search_used.filters_applied).
+        const allowed = isScalar(field) || (field instanceof z.ZodArray && isScalar((field as z.ZodArray<z.ZodTypeAny>).element));
+        expect(allowed, `${name}.${key} must be an enum, number, boolean, or array of enums`).toBe(true);
       }
     }
   });

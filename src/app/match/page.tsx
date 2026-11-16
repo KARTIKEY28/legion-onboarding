@@ -22,7 +22,9 @@ import type { EvidenceTier } from "@/clinicians/match";
 import { nextSlots, openSlots, type Slot } from "@/clinicians/schedule";
 import { CLINICIAN_GENDERS, LANGUAGES, type AvailabilityWindow, type ClinicianGender, type LanguageId } from "@/clinicians/model";
 import { concernPhrase, joinPhrases, languagePhrase } from "@/data/phrases";
+import type { TopicId } from "@/facts";
 import { estimateFromAnswers, estimateLine } from "@/data/estimate";
+import { parseSearch } from "@/data/searchParse";
 import { SafeFreeText } from "@/components/safety";
 import { LoadingScreen, Progress, Screen, TextLink, secondaryClass } from "@/components/ui";
 import { formatInZone, type UsState } from "@/time";
@@ -34,6 +36,13 @@ const tierKey = (e: EvidenceTier) => (e.tier === 3 ? "outcomes" : e.tier === 2 ?
 
 const CLIENT_TIMEOUT_MS = 3000;
 const DEV_LABEL = process.env.NEXT_PUBLIC_SHOW_DEV_LABEL === "1";
+
+/** Tappable example searches, so the demo path is reliable. Each parses to real filters. */
+const SEARCH_EXAMPLES = [
+  "A Spanish-speaking clinician for depression and ADHD",
+  "A woman psychiatrist for anxiety",
+  "A Latina clinician who understands my culture",
+];
 
 const TIME_CHIPS: { id: "any" | AvailabilityWindow; label: string }[] = [
   { id: "any", label: "Any time" },
@@ -92,7 +101,11 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
   const [timeFilter, setTimeFilter] = useState<"any" | AvailabilityWindow>("any");
   const [languageFilter, setLanguageFilter] = useState<"any" | LanguageId>(answers.needs?.language ?? "any");
   const [genderFilter, setGenderFilter] = useState<"any" | ClinicianGender>(answers.needs?.gender ?? "any");
+  // Filters that only the search box sets: conditions and a shared cultural background.
+  const [topicFilters, setTopicFilters] = useState<TopicId[]>([]);
+  const [culturalFilter, setCulturalFilter] = useState(false);
   const [note, setNote] = useState(answers.needs?.note ?? "");
+  const [searched, setSearched] = useState(false);
   const [noneSelected, setNoneSelected] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -111,26 +124,75 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
     [baseInput, languageFilter, genderFilter],
   );
   const everyone = useMemo(() => allRanked(baseInput, now), [baseInput, now]);
-  const filtersActive = timeFilter !== "any" || languageFilter !== "any" || genderFilter !== "any";
+  const filtersActive =
+    timeFilter !== "any" || languageFilter !== "any" || genderFilter !== "any" || topicFilters.length > 0 || culturalFilter;
   const visible = useMemo(
     () =>
       everyone.filter(
         (m) =>
           (timeFilter === "any" || openSlots(m.clinician, now, [timeFilter]).length > 0) &&
           (languageFilter === "any" || m.clinician.languages.includes(languageFilter)) &&
-          (genderFilter === "any" || m.clinician.gender === genderFilter),
+          (genderFilter === "any" || m.clinician.gender === genderFilter) &&
+          (topicFilters.length === 0 || topicFilters.some((t) => m.clinician.specialties.includes(t))) &&
+          (!culturalFilter || Boolean(m.clinician.culturalBackground)),
       ),
-    [everyone, timeFilter, languageFilter, genderFilter, now],
+    [everyone, timeFilter, languageFilter, genderFilter, topicFilters, culturalFilter, now],
   );
   const noStrong = result.noStrongMatch || noneSelected;
   const cards = showAll ? visible : visible.slice(0, 3);
   const tooFew = filtersActive && visible.length < 3;
+  // The search ran but mapped to no filters: show everyone with a gentle note.
+  const searchedNothing = searched && !filtersActive;
 
   function resetFilters() {
     setTimeFilter("any");
     setLanguageFilter("any");
     setGenderFilter("any");
+    setTopicFilters([]);
+    setCulturalFilter(false);
     setSelection(null);
+  }
+
+  /** The active filters, as removable chips. Also the source of the search_used event. */
+  const appliedFilters: { key: string; token: string; label: string; remove: () => void }[] = [];
+  if (languageFilter !== "any")
+    appliedFilters.push({ key: "lang", token: languageFilter, label: languagePhrase[languageFilter], remove: () => changeLanguageFilter("any") });
+  if (genderFilter !== "any")
+    appliedFilters.push({
+      key: "gender",
+      token: genderFilter,
+      label: CLINICIAN_GENDERS.find((g) => g.id === genderFilter)?.label ?? "",
+      remove: () => changeGenderFilter("any"),
+    });
+  if (timeFilter !== "any")
+    appliedFilters.push({ key: "time", token: timeFilter, label: TIME_CHIPS.find((c) => c.id === timeFilter)?.label ?? "", remove: () => changeTimeFilter("any") });
+  for (const t of topicFilters)
+    appliedFilters.push({ key: `topic-${t}`, token: t, label: concernPhrase[t], remove: () => setTopicFilters((cur) => cur.filter((x) => x !== t)) });
+  if (culturalFilter)
+    appliedFilters.push({ key: "cultural", token: "cultural", label: "Shared cultural background", remove: () => setCulturalFilter(false) });
+
+  /** Deterministic parse of the search text into the existing filters. */
+  function runSearch(text: string) {
+    setSearched(true);
+    const parsed = parseSearch(text);
+    if (parsed.language) setLanguageFilter(parsed.language);
+    if (parsed.gender) setGenderFilter(parsed.gender);
+    if (parsed.time) setTimeFilter(parsed.time);
+    if (parsed.topics.length) setTopicFilters(parsed.topics);
+    setCulturalFilter(parsed.cultural);
+    setSelection(null);
+    const tokens: (TopicId | LanguageId | ClinicianGender | AvailabilityWindow | "cultural")[] = [];
+    if (parsed.language) tokens.push(parsed.language);
+    if (parsed.gender) tokens.push(parsed.gender);
+    if (parsed.time) tokens.push(parsed.time);
+    tokens.push(...parsed.topics);
+    if (parsed.cultural) tokens.push("cultural");
+    getTracker()("match.search_used", { filters_applied: tokens });
+  }
+
+  function applyExample(text: string) {
+    setNote(text);
+    runSearch(text);
   }
 
   // match.viewed once.
@@ -307,15 +369,74 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
         </ChipRow>
       </div>
 
-      {/* Optional note: still safety-checked (SafeFreeText escalates on its own), still feeds the pre-visit summary. */}
-      <SafeFreeText
-        id="match-note"
-        label="Anything else you want your clinician to know? (optional)"
-        hint="For example, something that would help you feel comfortable. Read by your care team, and used to draft your visit summary."
-        value={note}
-        onChange={setNote}
-        step="match"
-      />
+      {/* Search box. The free text is safety-checked (SafeFreeText escalates on its
+          own) and kept for the pre-visit summary; a deterministic parse maps
+          recognised phrases to the filters above. */}
+      <div className="flex flex-col gap-3 rounded-lg bg-surface p-4">
+        <SafeFreeText
+          id="match-search"
+          label="Describe what you're looking for"
+          hint="We'll use this to filter and to help your clinician prepare."
+          value={note}
+          onChange={setNote}
+          step="match"
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => runSearch(note)}
+            className="min-h-11 rounded-full bg-accent px-5 py-2 text-base font-medium text-accent-ink hover:bg-accent-dark"
+          >
+            Search
+          </button>
+          <span className="micro text-ink-muted">Prototype: matches on a fixed set of filters.</span>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <p className="micro text-ink-muted">Try</p>
+          <div className="flex flex-wrap gap-2">
+            {SEARCH_EXAMPLES.map((ex) => (
+              <button
+                key={ex}
+                type="button"
+                onClick={() => applyExample(ex)}
+                className="min-h-11 rounded-full border border-line bg-canvas px-3 py-2 text-left text-sm hover:border-accent"
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Applied filters, as a removable summary row. */}
+      {appliedFilters.length > 0 && (
+        <div role="group" aria-label="Applied filters" className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-ink-muted">Filtered by:</span>
+          {appliedFilters.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={f.remove}
+              aria-label={`Remove filter ${f.label}`}
+              className="inline-flex min-h-8 items-center gap-1 rounded-full border border-accent bg-accent-soft px-3 py-1 text-sm font-medium"
+            >
+              {f.label}
+              <span aria-hidden className="text-ink-muted">
+                ×
+              </span>
+            </button>
+          ))}
+          <button type="button" onClick={resetFilters} className="text-sm text-accent underline underline-offset-2">
+            Clear all
+          </button>
+        </div>
+      )}
+
+      {searchedNothing && (
+        <p role="status" className="text-sm text-ink-muted">
+          Showing everyone. Refine with the filters above.
+        </p>
+      )}
 
       {noStrong && (
         <p role="status" className="rounded-md bg-accent-soft px-4 py-3">
