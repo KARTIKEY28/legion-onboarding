@@ -30,6 +30,7 @@ export function ClinicianProfile({
   hasInsurance,
   onAddInsurance,
   deepLinkAvailability,
+  onRequestIntro,
   onPick,
 }: {
   clinician: Clinician;
@@ -43,6 +44,8 @@ export function ClinicianProfile({
   onAddInsurance?: () => void;
   /** When true (opened via "More times"), scroll to availability on mount. */
   deepLinkAvailability?: boolean;
+  /** Opens the "Request a free intro call" sheet (a design proposal). */
+  onRequestIntro?: () => void;
   onPick: (slot: Slot) => void;
 }) {
   const availabilityRef = useRef<HTMLElement>(null);
@@ -228,6 +231,17 @@ export function ClinicianProfile({
               </>
             )}
           </section>
+
+          {/* Intro-call entry point (design proposal): the alternative to booking,
+              secondary to picking a time. Sits directly above availability. */}
+          {onRequestIntro && (
+            <section aria-label="Not ready to book" className="flex flex-col gap-1 rounded-lg border border-line p-4">
+              <button type="button" onClick={onRequestIntro} className="self-start text-accent underline underline-offset-2">
+                Not ready to book? Request a free intro call
+              </button>
+              <p className="text-sm text-ink-muted">A free 15-minute video call to see if {firstName} is the right fit.</p>
+            </section>
+          )}
 
           {/* 12. Full availability */}
           <section ref={availabilityRef} id="profile-availability" className="flex flex-col gap-3">

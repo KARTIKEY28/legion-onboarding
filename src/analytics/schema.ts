@@ -161,6 +161,15 @@ export const EVENTS = {
     rank: count,
     evidence_tier: z.enum(["declared_fit", "experience", "outcomes"]),
   }),
+  // Design proposal: the "Request a free intro call" release valve on the
+  // profile. The sheet opened.
+  "intro_call.opened": event("match"),
+  // The simulated intro-call request. Only the fixed reason tokens and a count
+  // of chosen times, never the note, the name or the email.
+  "intro_call.requested": event("match", {
+    reasons: z.array(z.enum(["fit", "medication", "cost", "other"])),
+    slots_count: count,
+  }),
 
   // Cost and terms. Confirming a time requests the reservation; nothing holds the slot,
   // so availability is checked here and again when payment is submitted.

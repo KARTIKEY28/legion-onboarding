@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { getTracker } from "@/analytics/client";
 import { ClinicianProfile } from "@/components/ClinicianProfile";
 import { ConfirmBar } from "@/components/ConfirmBar";
+import { IntroCallSheet } from "@/components/IntroCallSheet";
 import { LoadingScreen, Screen, TextLink } from "@/components/ui";
 import { CLINICIANS } from "@/clinicians/data";
 import { evidenceTier, matchInputFromAnswers, type EvidenceTier, type MatchInput } from "@/clinicians/match";
@@ -64,6 +65,7 @@ function ClinicianView() {
   const state = baseInput.state;
 
   const [slot, setSlot] = useState<Slot | null>(null);
+  const [introOpen, setIntroOpen] = useState(false);
 
   // profile.opened once per mount (the page replaces the old drawer event).
   const fired = useRef(false);
@@ -125,6 +127,7 @@ function ClinicianView() {
         hasInsurance={getAnswers().insurance?.path === "insured"}
         onAddInsurance={addInsurance}
         deepLinkAvailability={deepLink}
+        onRequestIntro={() => setIntroOpen(true)}
         onPick={pick}
       />
 
@@ -143,6 +146,10 @@ function ClinicianView() {
           state={state}
           onContinue={continueBooking}
         />
+      )}
+
+      {introOpen && (
+        <IntroCallSheet clinician={clinician} state={state} now={now} onClose={() => setIntroOpen(false)} />
       )}
     </Screen>
   );
