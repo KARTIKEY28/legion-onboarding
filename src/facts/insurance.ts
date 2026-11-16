@@ -17,6 +17,8 @@ export const samplePayers = {
     // A government program, so that coverage discovery can surface a Medicaid
     // plan Legion cannot accept (the late-exclusion path). Offered in both states.
     { id: "sample_medicaid", label: "Sample Medicaid Plan", states: ["TX", "UT"] },
+    // National plan that covers specialist visits but doesn't name behavioral health.
+    { id: "national_choice", label: "National Choice", states: ["TX", "UT"] },
   ],
   status: "assumption",
   source: "Synthetic placeholder list for the prototype. Not real insurers.",
