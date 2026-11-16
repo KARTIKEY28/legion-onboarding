@@ -128,9 +128,11 @@ export const EVENTS = {
   }),
   // A time was tapped on a card or in the profile (selection, not yet confirmed).
   "slot.selected": event("match"),
-  // Opening a clinician profile; rank and where it was opened from, never the name
+  // Opening a clinician profile; rank, where it was opened from, and what was
+  // tapped to open it (the name, the photo, or "more times"), never the name
   "profile.opened": event("match", {
     from: z.enum(["card", "full_list"]),
+    source: z.enum(["name", "photo", "more_times"]),
     rank: count,
   }),
   // The clinician's name is never sent; rank, tier and source only, so it can't be joined to patient data

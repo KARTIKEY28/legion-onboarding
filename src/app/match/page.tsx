@@ -179,14 +179,15 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
 
   // Profile sheet, driven by the URL (?clinician=id).
   const openId = searchParams.get("clinician");
-  const openMeta = useRef<{ from: "card" | "full_list"; rank: number }>({ from: "card", rank: 0 });
+  type OpenSource = "name" | "photo" | "more_times";
+  const openMeta = useRef<{ from: "card" | "full_list"; rank: number; source: OpenSource }>({ from: "card", rank: 0, source: "name" });
   const firedProfile = useRef<string | null>(null);
   const openMatch = useMemo(
     () => (openId ? everyone.find((m) => m.clinician.id === openId) ?? null : null),
     [openId, everyone],
   );
-  function openProfile(id: string, from: "card" | "full_list", rank: number) {
-    openMeta.current = { from, rank };
+  function openProfile(id: string, from: "card" | "full_list", rank: number, source: OpenSource) {
+    openMeta.current = { from, rank, source };
     router.push(`/match?clinician=${id}`, { scroll: false });
   }
   function closeProfile() {
@@ -195,7 +196,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
   useEffect(() => {
     if (openId && firedProfile.current !== openId) {
       firedProfile.current = openId;
-      getTracker()("profile.opened", { from: openMeta.current.from, rank: openMeta.current.rank });
+      getTracker()("profile.opened", { from: openMeta.current.from, source: openMeta.current.source, rank: openMeta.current.rank });
     }
     if (!openId) firedProfile.current = null;
   }, [openId]);
@@ -263,7 +264,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
                 taken={takenFor === match.clinician.id}
                 state={baseInput.state}
                 onPick={(slot) => select(match, slot, "top_match", i + 1, "card")}
-                onOpenProfile={() => openProfile(match.clinician.id, "card", i + 1)}
+                onOpenProfile={(source) => openProfile(match.clinician.id, "card", i + 1, source)}
                 onChooseAnother={() => setTakenFor(null)}
               />
             </li>
@@ -286,7 +287,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
                   taken={takenFor === match.clinician.id}
                   state={baseInput.state}
                   onPick={(slot) => select(match, slot, "full_list", i + 1, "card")}
-                  onOpenProfile={() => openProfile(match.clinician.id, "full_list", i + 1)}
+                  onOpenProfile={(source) => openProfile(match.clinician.id, "full_list", i + 1, source)}
                   onChooseAnother={() => setTakenFor(null)}
                 />
               </li>
@@ -324,6 +325,8 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
           clinician={openMatch.clinician}
           input={baseInput}
           now={now}
+          estimate={estimateLine(estimate)}
+          openedFrom={openMeta.current.source}
           onClose={closeProfile}
           onPick={(slot) =>
             select(
@@ -410,7 +413,7 @@ function ClinicianCard({
   taken: boolean;
   state: UsState;
   onPick: (slot: Slot) => void;
-  onOpenProfile: () => void;
+  onOpenProfile: (source: "name" | "photo" | "more_times") => void;
   onChooseAnother: () => void;
 }) {
   const { clinician, facts } = match;
@@ -432,12 +435,12 @@ function ClinicianCard({
   return (
     <article className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={onOpenProfile} aria-label={`Open ${clinician.name}'s profile`}>
+        <button type="button" onClick={() => onOpenProfile("photo")} aria-label={`Open ${clinician.name}'s profile`}>
           <Portrait id={clinician.id} name={clinician.name} size={44} />
         </button>
         <div className="flex flex-col">
           <p className="text-base font-semibold leading-tight">
-            <button type="button" onClick={onOpenProfile} className="text-left underline-offset-2 hover:underline">
+            <button type="button" onClick={() => onOpenProfile("name")} className="text-left underline-offset-2 hover:underline">
               {clinician.name}
             </button>{" "}
             {clinician.pronouns && <span className="text-sm font-normal text-ink-muted">({clinician.pronouns})</span>}
@@ -501,7 +504,7 @@ function ClinicianCard({
             );
           })}
           {!taken && (
-            <button type="button" onClick={onOpenProfile} className="text-sm text-accent underline underline-offset-2">
+            <button type="button" onClick={() => onOpenProfile("more_times")} className="text-sm text-accent underline underline-offset-2">
               More times
             </button>
           )}
