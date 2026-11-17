@@ -113,11 +113,31 @@ export const EVENTS = {
   }),
   "match.full_list_opened": event("match"),
   "match.none_selected": event("match"),
-  // A filter chip changed. Time, language and gender are live chips on Match
-  // (the Needs step is gone). Type and value only, never free text.
+  // A filter dropdown changed. Time, language, gender and focus area are the
+  // Match filters. Type and value only, never free text.
   "match.filter_changed": event("match", {
-    type: z.enum(["time", "language", "gender"]),
-    value: z.enum(["any", "weekday_mornings", "weekday_afternoons", "weekday_evenings", "weekends", "en", "es", "woman", "man", "nonbinary"]),
+    type: z.enum(["time", "language", "gender", "focus"]),
+    value: z.enum([
+      "any",
+      "weekday_mornings",
+      "weekday_afternoons",
+      "weekday_evenings",
+      "weekends",
+      "en",
+      "es",
+      "woman",
+      "man",
+      "nonbinary",
+      // Focus-area values (the eight published conditions).
+      "low_mood",
+      "worry",
+      "panic",
+      "mood_swings",
+      "focus",
+      "sleep",
+      "past_events",
+      "unwanted_thoughts",
+    ]),
   }),
   // The search box ran. Only the fixed filter tokens it mapped to, never the
   // free text the patient typed and never PII.

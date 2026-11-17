@@ -11,7 +11,7 @@ import { personas } from "@dicebear/collection";
  * professional and reads with the clinician's pronouns: no glasses or
  * accessories (eyes limited to open/happy), no mouth accessories, natural hair
  * colors only (no pink/blue), facial hair for he/him clinicians, and muted
- * backgrounds. Reviewed visually across all 12.
+ * backgrounds. Reviewed visually across all clinicians.
  */
 
 /** Muted, low-saturation background tones, assigned per clinician for variety. */
@@ -28,7 +28,7 @@ const HAIR = {
 } as const;
 
 /** he/him clinicians get facial hair so the portrait reads masculine. */
-const HE_HIM = new Set(["c2", "c6", "c8", "c12"]);
+const HE_HIM = new Set(["c2", "c6", "c8", "c12", "c14", "c17"]);
 
 const HAIR_COLOR: Record<string, string> = {
   c1: HAIR.brown,
@@ -43,6 +43,12 @@ const HAIR_COLOR: Record<string, string> = {
   c10: HAIR.auburn,
   c11: HAIR.darkBrown,
   c12: HAIR.brown,
+  c13: HAIR.gray,
+  c14: HAIR.black,
+  c15: HAIR.brown,
+  c16: HAIR.black,
+  c17: HAIR.darkBrown,
+  c18: HAIR.darkBrown,
 };
 
 /** A data-URI SVG portrait for a clinician, stable across renders and machines. */

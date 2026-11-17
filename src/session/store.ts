@@ -77,7 +77,8 @@ export interface SessionAnswers {
     time: AvailabilityWindow | "any";
     language: LanguageId | "any";
     gender: ClinicianGender | "any";
-    topics: TopicId[];
+    /** The single Focus-area dropdown selection; "any" means no focus filter. */
+    focus: TopicId | "any";
     cultural: boolean;
     /** Whether the full "See all clinicians" list was open. */
     showAll?: boolean;

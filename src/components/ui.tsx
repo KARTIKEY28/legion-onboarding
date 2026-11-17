@@ -23,8 +23,11 @@ export function TextLink({ className = "", ...props }: ComponentProps<typeof Lin
   return <Link className={`text-base text-accent underline underline-offset-2 ${className}`} {...props} />;
 }
 
-export function Screen({ children }: { children: ReactNode }) {
-  return <main className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 pt-8 pb-4 md:pb-16">{children}</main>;
+export function Screen({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
+  // `wide` widens the column on desktop (for the two-up match grid); mobile is
+  // unchanged, so there is never horizontal scroll at phone width.
+  const max = wide ? "max-w-xl md:max-w-3xl" : "max-w-xl";
+  return <main className={`mx-auto flex w-full ${max} flex-col gap-6 px-4 pt-8 pb-4 md:pb-16`}>{children}</main>;
 }
 
 /**
