@@ -1,7 +1,7 @@
 import type { Clinician } from "./model";
 
 /**
- * 15 SYNTHETIC clinicians for the prototype. Not real people. Every experience
+ * 18 SYNTHETIC clinicians for the prototype. Not real people. Every experience
  * and outcome figure is illustrative and is labeled as such on screen.
  * Plan ids are from src/facts/insurance.ts (also synthetic). Replace this whole
  * file with Legion's real, reviewed clinician data before any launch.
@@ -257,5 +257,54 @@ export const CLINICIANS: Clinician[] = [
     acceptedPayers: ["example_health", "mountain_health"],
     bio: "I sit with low mood, hard past experiences and the worry around them, including morning and evening times.",
     experience: { similarPatients: 110, illustrative: true },
+  },
+  {
+    id: "c16",
+    name: "Hana Kim",
+    pronouns: "she/her",
+    credential: "Psychiatric nurse practitioner",
+    role: "pmhnp",
+    licensedStates: ["TX"],
+    specialties: ["worry", "panic", "focus", "sleep"],
+    languages: ["en"],
+    gender: "woman",
+    availability: ["weekday_mornings", "weekday_evenings"],
+    acceptedPayers: ["example_health", "placeholder_health"],
+    bio: "I work with worry, panic and the focus problems that come with a loud mind, with early-morning and evening times for people with full days.",
+    experience: { similarPatients: 130, illustrative: true },
+    outcomes: { measure: OUTCOME_MEASURE, cohortSize: 57, improvedShare: 0.67, illustrative: true },
+  },
+  {
+    id: "c17",
+    name: "Victor Ruiz",
+    pronouns: "he/him",
+    credential: "Psychiatrist",
+    role: "psychiatrist",
+    licensedStates: ["UT"],
+    specialties: ["low_mood", "worry", "panic", "focus"],
+    languages: ["en", "es"],
+    gender: "man",
+    availability: ["weekday_mornings", "weekday_afternoons"],
+    acceptedPayers: ["mountain_health", "sample_insurance"],
+    bio: "I help people in Utah with low mood, worry, panic and focus, in English or Spanish, with morning and afternoon times.",
+    culturalBackground: "Puerto Rican, and I see patients in English or Spanish.",
+    experience: { similarPatients: 170, illustrative: true },
+    outcomes: { measure: OUTCOME_MEASURE, cohortSize: 60, improvedShare: 0.68, illustrative: true },
+  },
+  {
+    id: "c18",
+    name: "Mabel Osei",
+    pronouns: "she/her",
+    credential: "Psychiatric nurse practitioner",
+    role: "pmhnp",
+    licensedStates: ["TX", "UT"],
+    specialties: ["past_events", "unwanted_thoughts", "mood_swings", "low_mood"],
+    languages: ["en"],
+    gender: "woman",
+    availability: ["weekday_afternoons", "weekday_evenings"],
+    acceptedPayers: ["example_health", "mountain_health"],
+    bio: "I help people carry hard past experiences, hard-to-control thoughts and big mood shifts, with afternoon and evening times in both Texas and Utah.",
+    experience: { similarPatients: 125, illustrative: true },
+    outcomes: { measure: OUTCOME_MEASURE, cohortSize: 52, improvedShare: 0.7, illustrative: true },
   },
 ];

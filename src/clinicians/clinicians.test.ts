@@ -12,9 +12,9 @@ const genderIds = new Set<string>(CLINICIAN_GENDERS.map((g) => g.id));
 const payerIds = new Set<string>(samplePayers.value.map((p) => p.id));
 
 describe("synthetic clinicians", () => {
-  it("has 15 clinicians with unique ids", () => {
-    expect(CLINICIANS).toHaveLength(15);
-    expect(new Set(CLINICIANS.map((c) => c.id)).size).toBe(15);
+  it("has 18 clinicians with unique ids", () => {
+    expect(CLINICIANS).toHaveLength(18);
+    expect(new Set(CLINICIANS.map((c) => c.id)).size).toBe(18);
   });
 
   it("only uses valid specialties, availability, languages, gender, payers and licensed states", () => {

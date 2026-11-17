@@ -141,6 +141,30 @@ export const PROFILE_CONTENT: Record<string, ProfileContent> = {
       "I sit with the hard parts without rushing, and I'm honest that healing is rarely a straight line. Where it fits, we pair medication with small, concrete steps you can actually keep.",
     treatmentApproaches: ["Medication management", "Trauma-informed care", "Anxiety skills"],
   },
+  c16: {
+    yearsExperience: 10,
+    aboutMe:
+      "Before this I ran a sleep lab, scoring studies at 3 a.m. and watching how a wired mind and a tired body keep each other going. I became a psychiatric NP to treat the whole loop, not just one night's symptom. I work mostly with worry, panic and the scattered focus that comes from running on too little rest.",
+    approach:
+      "I start by untangling what's driving what, usually sleep and a nervous system stuck in high gear. We pick one lever at a time and I'm precise about timing, because when you do something matters as much as what you do.",
+    treatmentApproaches: ["Medication management", "Sleep and circadian care", "Panic-focused skills"],
+  },
+  c17: {
+    yearsExperience: 13,
+    aboutMe:
+      "I grew up between San Juan and Salt Lake City, and I learned early how much it matters to be understood in your own language. I came to psychiatry from emergency medicine, where I got tired of patching people up and sending them back into the same storm. I see folks in Utah, in English or Spanish, for low mood, worry, panic and focus.",
+    approach:
+      "I'm direct and warm about it. I'll tell you plainly what I see and what the options cost and gain, and we choose together. I'd rather you leave with two clear next steps than ten vague ones.",
+    treatmentApproaches: ["Medication management", "Bilingual care", "CBT-informed strategies"],
+  },
+  c18: {
+    yearsExperience: 11,
+    aboutMe:
+      "I spent years as a labor-and-delivery nurse, in rooms where joy and fear sat side by side, and it taught me to stay steady when feelings run high. I became a psychiatric NP to work with the harder, longer things: old wounds that still ache, thoughts that won't let go, and moods that swing wider than you'd like. I see patients in both Texas and Utah.",
+    approach:
+      "I build safety first and move at your speed, never pushing you to open a door before you're ready. Where medication helps, I keep it simple and watch it closely, and we track real changes in your week, not just a checklist.",
+    treatmentApproaches: ["Trauma-informed care", "Medication management", "ERP-informed support"],
+  },
 };
 
 const FALLBACK: ProfileContent = {

@@ -22,7 +22,7 @@ import type { EvidenceTier } from "@/clinicians/match";
 import { nextSlots, openSlots, type Slot } from "@/clinicians/schedule";
 import { CLINICIAN_GENDERS, LANGUAGES, type AvailabilityWindow, type ClinicianGender, type LanguageId } from "@/clinicians/model";
 import { concernPhrase, joinPhrases, languagePhrase } from "@/data/phrases";
-import type { TopicId } from "@/facts";
+import { conditionTopics, type TopicId } from "@/facts";
 import { estimateFromAnswers, estimateLine } from "@/data/estimate";
 import { parseSearch } from "@/data/searchParse";
 import { SafeFreeText } from "@/components/safety";
@@ -37,7 +37,7 @@ const tierKey = (e: EvidenceTier) => (e.tier === 3 ? "outcomes" : e.tier === 2 ?
 const CLIENT_TIMEOUT_MS = 3000;
 /** Tappable example searches, so the demo path is reliable. Each parses to real filters. */
 const SEARCH_EXAMPLES = [
-  "A Spanish-speaking clinician for depression and ADHD",
+  "A Spanish-speaking clinician for depression",
   "A woman psychiatrist for anxiety",
   "A Latina clinician who understands my culture",
 ];
@@ -102,8 +102,9 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
   const [timeFilter, setTimeFilter] = useState<"any" | AvailabilityWindow>(saved?.time ?? "any");
   const [languageFilter, setLanguageFilter] = useState<"any" | LanguageId>(saved?.language ?? answers.needs?.language ?? "any");
   const [genderFilter, setGenderFilter] = useState<"any" | ClinicianGender>(saved?.gender ?? answers.needs?.gender ?? "any");
-  // Filters that only the search box sets: conditions and a shared cultural background.
-  const [topicFilters, setTopicFilters] = useState<TopicId[]>(saved?.topics ?? []);
+  // Focus area is a single-select dropdown, like the others. Cultural background
+  // is set only by the search box (the "understands my culture" path).
+  const [focusFilter, setFocusFilter] = useState<"any" | TopicId>(saved?.focus ?? "any");
   const [culturalFilter, setCulturalFilter] = useState(saved?.cultural ?? false);
   const [note, setNote] = useState(answers.needs?.note ?? "");
   const [searched, setSearched] = useState(false);
@@ -114,11 +115,12 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
   const consumed = useRef(false);
   const [headline, setHeadline] = useState<Reflection | null>(null);
 
-  // Language and gender are live, soft filter chips (never a hard constraint),
-  // applied over the full pool alongside the time-of-day filter.
+  // Time, language, gender and focus are hard dropdown filters over the full
+  // state pool. Any one can narrow the list; if a combination leaves fewer than
+  // two, those still show with a one-tap "Clear filters".
   const everyone = useMemo(() => allRanked(baseInput, now), [baseInput, now]);
   const filtersActive =
-    timeFilter !== "any" || languageFilter !== "any" || genderFilter !== "any" || topicFilters.length > 0 || culturalFilter;
+    timeFilter !== "any" || languageFilter !== "any" || genderFilter !== "any" || focusFilter !== "any" || culturalFilter;
   const visible = useMemo(
     () =>
       everyone.filter(
@@ -126,14 +128,14 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
           (timeFilter === "any" || openSlots(m.clinician, now, [timeFilter]).length > 0) &&
           (languageFilter === "any" || m.clinician.languages.includes(languageFilter)) &&
           (genderFilter === "any" || m.clinician.gender === genderFilter) &&
-          (topicFilters.length === 0 || topicFilters.some((t) => m.clinician.specialties.includes(t))) &&
+          (focusFilter === "any" || m.clinician.specialties.includes(focusFilter)) &&
           (!culturalFilter || Boolean(m.clinician.culturalBackground)),
       ),
-    [everyone, timeFilter, languageFilter, genderFilter, topicFilters, culturalFilter, now],
+    [everyone, timeFilter, languageFilter, genderFilter, focusFilter, culturalFilter, now],
   );
   const noStrong = result.noStrongMatch || noneSelected;
   const cards = showAll ? visible : visible.slice(0, 3);
-  const tooFew = filtersActive && visible.length < 3;
+  const tooFew = filtersActive && visible.length < 2;
   // The search ran but mapped to no filters: show everyone with a gentle note.
   const searchedNothing = searched && !filtersActive;
 
@@ -141,7 +143,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
     setTimeFilter("any");
     setLanguageFilter("any");
     setGenderFilter("any");
-    setTopicFilters([]);
+    setFocusFilter("any");
     setCulturalFilter(false);
     setSelection(null);
   }
@@ -159,26 +161,29 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
     });
   if (timeFilter !== "any")
     appliedFilters.push({ key: "time", token: timeFilter, label: TIME_CHIPS.find((c) => c.id === timeFilter)?.label ?? "", remove: () => changeTimeFilter("any") });
-  for (const t of topicFilters)
-    appliedFilters.push({ key: `topic-${t}`, token: t, label: concernPhrase[t], remove: () => setTopicFilters((cur) => cur.filter((x) => x !== t)) });
+  if (focusFilter !== "any")
+    appliedFilters.push({ key: "focus", token: focusFilter, label: concernPhrase[focusFilter], remove: () => changeFocusFilter("any") });
   if (culturalFilter)
     appliedFilters.push({ key: "cultural", token: "cultural", label: "Shared cultural background", remove: () => setCulturalFilter(false) });
 
-  /** Deterministic parse of the search text into the existing filters. */
+  /** Deterministic parse of the search text into the same dropdown filters. */
   function runSearch(text: string) {
     setSearched(true);
     const parsed = parseSearch(text);
     if (parsed.language) setLanguageFilter(parsed.language);
     if (parsed.gender) setGenderFilter(parsed.gender);
     if (parsed.time) setTimeFilter(parsed.time);
-    if (parsed.topics.length) setTopicFilters(parsed.topics);
+    // The Focus dropdown is single-select, so a multi-condition phrase applies
+    // the first recognised condition.
+    const focus = parsed.topics[0];
+    if (focus) setFocusFilter(focus);
     setCulturalFilter(parsed.cultural);
     setSelection(null);
     const tokens: (TopicId | LanguageId | ClinicianGender | AvailabilityWindow | "cultural")[] = [];
     if (parsed.language) tokens.push(parsed.language);
     if (parsed.gender) tokens.push(parsed.gender);
     if (parsed.time) tokens.push(parsed.time);
-    tokens.push(...parsed.topics);
+    if (focus) tokens.push(focus);
     if (parsed.cultural) tokens.push("cultural");
     getTracker()("match.search_used", { filters_applied: tokens });
   }
@@ -272,6 +277,12 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
     getTracker()("match.filter_changed", { type: "gender", value });
   }
 
+  function changeFocusFilter(value: "any" | TopicId) {
+    setFocusFilter(value);
+    setSelection(null);
+    getTracker()("match.filter_changed", { type: "focus", value });
+  }
+
   // Saves the live filters and scroll position, then opens the full clinician
   // page. "Back to matches" restores this exact place (the 37% cliff).
   type OpenSource = "name" | "photo" | "more_times";
@@ -282,7 +293,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
         time: timeFilter,
         language: languageFilter,
         gender: genderFilter,
-        topics: topicFilters,
+        focus: focusFilter,
         cultural: culturalFilter,
         showAll,
         scrollY: typeof window !== "undefined" ? window.scrollY : 0,
@@ -317,7 +328,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
   }, []);
 
   return (
-    <Screen>
+    <Screen wide>
       <Progress step="match" />
 
       <div className="flex flex-col gap-2">
@@ -333,35 +344,34 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
         </p>
       </div>
 
-      {/* Live filter chips: time, language, gender. None can empty the list. */}
-      <div className="flex flex-col gap-3">
-        <ChipRow label="Time" ariaLabel="Filter by time of day">
-          {TIME_CHIPS.map((chip) => (
-            <Chip key={chip.id} active={timeFilter === chip.id} onClick={() => changeTimeFilter(chip.id)}>
-              {chip.label}
-            </Chip>
-          ))}
-        </ChipRow>
-        <ChipRow label="Language" ariaLabel="Filter by language">
-          <Chip active={languageFilter === "any"} onClick={() => changeLanguageFilter("any")}>
-            No preference
-          </Chip>
-          {LANGUAGES.map((l) => (
-            <Chip key={l.id} active={languageFilter === l.id} onClick={() => changeLanguageFilter(l.id)}>
-              {l.label}
-            </Chip>
-          ))}
-        </ChipRow>
-        <ChipRow label="Gender" ariaLabel="Filter by clinician gender">
-          <Chip active={genderFilter === "any"} onClick={() => changeGenderFilter("any")}>
-            No preference
-          </Chip>
-          {CLINICIAN_GENDERS.map((g) => (
-            <Chip key={g.id} active={genderFilter === g.id} onClick={() => changeGenderFilter(g.id)}>
-              {g.label}
-            </Chip>
-          ))}
-        </ChipRow>
+      {/* Filter dropdowns: time, language, gender, focus area. A compact row that
+          wraps to two-up on a phone. Any one is a hard filter; the list never
+          dead-ends (a "Clear filters" fallback appears if fewer than two match). */}
+      <div role="group" aria-label="Filters" className="flex flex-wrap gap-3">
+        <FilterSelect
+          label="Time"
+          value={timeFilter}
+          onChange={(v) => changeTimeFilter(v as "any" | AvailabilityWindow)}
+          options={TIME_CHIPS.map((c) => ({ value: c.id, label: c.label }))}
+        />
+        <FilterSelect
+          label="Language"
+          value={languageFilter}
+          onChange={(v) => changeLanguageFilter(v as "any" | LanguageId)}
+          options={[{ value: "any", label: "No preference" }, ...LANGUAGES.map((l) => ({ value: l.id, label: l.label }))]}
+        />
+        <FilterSelect
+          label="Gender"
+          value={genderFilter}
+          onChange={(v) => changeGenderFilter(v as "any" | ClinicianGender)}
+          options={[{ value: "any", label: "No preference" }, ...CLINICIAN_GENDERS.map((g) => ({ value: g.id, label: g.label }))]}
+        />
+        <FilterSelect
+          label="Focus area"
+          value={focusFilter}
+          onChange={(v) => changeFocusFilter(v as "any" | TopicId)}
+          options={[{ value: "any", label: "Any focus" }, ...conditionTopics.value.map((t) => ({ value: t.id, label: concernPhrase[t.id] }))]}
+        />
       </div>
 
       {/* Search box. The free text is safety-checked (SafeFreeText escalates on its
@@ -384,7 +394,6 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
           >
             Search
           </button>
-          <span className="micro text-ink-muted">Prototype: matches on a fixed set of filters.</span>
         </div>
         <div className="flex flex-col gap-1.5">
           <p className="micro text-ink-muted">Try</p>
@@ -444,13 +453,13 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
         <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
           Only a few clinicians match these filters.
           <button type="button" onClick={resetFilters} className="text-accent underline underline-offset-2">
-            Reset filters
+            Clear filters
           </button>
         </p>
       )}
 
       {!showAll && (
-        <ul className="flex flex-col gap-4">
+        <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {cards.map((match, i) => (
             <li key={match.clinician.id}>
               <ClinicianCard
@@ -473,7 +482,7 @@ function MatchView({ answers }: { answers: SessionAnswers }) {
       {showAll && (
         <section aria-label="All clinicians" className="flex flex-col gap-4">
           <p className="text-ink-muted">All clinicians with openings, most relevant first.</p>
-          <ul className="flex flex-col gap-4">
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {visible.map((match, i) => (
               <li key={match.clinician.id}>
                 <ClinicianCard
@@ -744,30 +753,36 @@ function NotifyMe({ initialEmail }: { initialEmail?: string }) {
   );
 }
 
-/** A labelled row of filter chips. */
-function ChipRow({ label, ariaLabel, children }: { label: string; ariaLabel: string; children: React.ReactNode }) {
+/** One labelled filter dropdown. Grows to fill the row and wraps two-up on a phone. */
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  const id = `filter-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="micro text-ink-muted">{label}</p>
-      <div role="group" aria-label={ariaLabel} className="flex flex-wrap gap-2">
-        {children}
-      </div>
+    <div className="flex min-w-[8.5rem] flex-1 flex-col gap-1 sm:min-w-[10rem] sm:flex-none">
+      <label htmlFor={id} className="micro text-ink-muted">
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="min-h-11 rounded-md border border-line bg-surface px-3 text-base"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
     </div>
-  );
-}
-
-/** One filter chip. Live filter, never a hard constraint. */
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={`min-h-11 rounded-full border px-4 py-2 text-base ${
-        active ? "border-accent bg-accent-soft font-medium" : "border-line bg-surface"
-      }`}
-    >
-      {children}
-    </button>
   );
 }

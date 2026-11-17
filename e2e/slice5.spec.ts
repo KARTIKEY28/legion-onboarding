@@ -62,24 +62,24 @@ test("the headline no longer mentions time windows", async ({ page }) => {
   await expect(page.getByTestId("match-headline")).toContainText("Clinicians who work with low mood and ongoing worry.");
 });
 
-test("filter chips (time, language, gender) filter the list and fire match.filter_changed", async ({ page }) => {
+test("filter dropdowns (time, language, gender, focus) narrow the list and fire match.filter_changed", async ({ page }) => {
   await setModel(page, "fail");
   await seedAndOpenMatch(page, STRONG);
 
-  await page.getByRole("button", { name: "Mornings", exact: true }).click();
+  await page.getByLabel("Time").selectOption("weekday_mornings");
   await expect(page.getByRole("article").first()).toContainText("Mornings openings"); // window, not "Next opening"
 
-  // Language and gender are live chips too, grouped by their own controls.
-  await page.getByRole("group", { name: "Filter by language" }).getByRole("button", { name: "Spanish", exact: true }).click();
-  await page.getByRole("group", { name: "Filter by clinician gender" }).getByRole("button", { name: "Man", exact: true }).click();
+  // The other three dropdowns, including the new Focus area.
+  await page.getByLabel("Language").selectOption("es");
+  await page.getByLabel("Gender").selectOption("man");
+  await page.getByLabel("Focus area").selectOption("low_mood");
 
   expect((await events(page)).filter((e) => e.event === "match.filter_changed").map((e) => e.properties)).toEqual([
     { type: "time", value: "weekday_mornings" },
     { type: "language", value: "es" },
     { type: "gender", value: "man" },
+    { type: "focus", value: "low_mood" },
   ]);
-  // Chips never empty the list: a reset is always offered if fewer than 3 remain.
-  await expect(page.getByRole("article").first()).toBeVisible();
 });
 
 test("'None of these feel right' shows the no-strong-match state and fires the event", async ({ page }) => {
@@ -104,20 +104,18 @@ test("'See all clinicians' opens the full list and selecting fires from full_lis
   expect(selected[0].properties.from).toBe("full_list");
 });
 
-test("language and gender chips are soft: they never dead-end, a reset is always offered", async ({ page }) => {
+test("filters are hard but never dead-end: a Clear filters fallback appears below two", async ({ page }) => {
   await setModel(page, "fail");
   await seedAndOpenMatch(page, STRONG);
 
-  // A restrictive combo (Spanish + Woman) narrows below three, but never empties:
-  // the matching clinicians stay and a one-tap reset appears.
-  await page.getByRole("group", { name: "Filter by language" }).getByRole("button", { name: "Spanish", exact: true }).click();
-  await page.getByRole("group", { name: "Filter by clinician gender" }).getByRole("button", { name: "Woman", exact: true }).click();
+  // A combination no clinician satisfies (panic + nonbinary in TX) leaves fewer
+  // than two, so a one-tap "Clear filters" appears instead of a dead end.
+  await page.getByLabel("Focus area").selectOption("panic");
+  await page.getByLabel("Gender").selectOption("nonbinary");
+  await expect(page.getByRole("button", { name: "Clear filters" })).toBeVisible();
 
-  await expect(page.getByRole("button", { name: "Reset filters" })).toBeVisible();
-  await expect(page.getByRole("article").first()).toBeVisible();
-
-  // Reset brings the full set back.
-  await page.getByRole("button", { name: "Reset filters" }).click();
+  // Clearing brings the top matches back.
+  await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(page.getByRole("article")).toHaveCount(3);
 });
 
@@ -171,20 +169,19 @@ test("search box: an example maps phrases to filters, shown as removable chips, 
   await setModel(page, "fail");
   await seedAndOpenMatch(page, STRONG);
 
-  await page.getByRole("button", { name: "A Spanish-speaking clinician for depression and ADHD" }).click();
+  await page.getByRole("button", { name: "A Spanish-speaking clinician for depression" }).click();
 
-  // The parsed filters show as removable chips (language + the two conditions).
+  // The parsed filters show as removable chips (language + the single focus).
   const applied = page.getByRole("group", { name: "Applied filters" });
   await expect(applied.getByRole("button", { name: /Remove filter Spanish/ })).toBeVisible();
   await expect(applied.getByRole("button", { name: /Remove filter low mood/ })).toBeVisible();
-  await expect(applied.getByRole("button", { name: /Remove filter focus and attention/ })).toBeVisible();
 
   // The event carries only the fixed filter tokens, never the free text.
   const used = (await events(page)).filter((e) => e.event === "match.search_used");
   expect(used).toHaveLength(1);
-  expect(used[0].properties.filters_applied).toEqual(expect.arrayContaining(["es", "low_mood", "focus"]));
+  expect(used[0].properties.filters_applied).toEqual(expect.arrayContaining(["es", "low_mood"]));
   const serialized = JSON.stringify(used);
-  for (const forbidden of ["Spanish-speaking", "depression", "ADHD"]) expect(serialized).not.toContain(forbidden);
+  for (const forbidden of ["Spanish-speaking", "depression"]) expect(serialized).not.toContain(forbidden);
 
   // A chip is removable.
   await applied.getByRole("button", { name: /Remove filter Spanish/ }).click();
@@ -327,7 +324,7 @@ test("back to matches: filters and scroll position are preserved (the 37% cliff)
   await seedAndOpenMatch(page, STRONG);
 
   // Apply a filter, then open the full list so the page is tall enough to scroll.
-  await page.getByRole("group", { name: "Filter by language" }).getByRole("button", { name: "Spanish", exact: true }).click();
+  await page.getByLabel("Language").selectOption("es");
   await page.getByRole("button", { name: "See all clinicians" }).click();
   await page.evaluate(() => window.scrollTo(0, 500));
   const scrollBefore = await page.evaluate(() => window.scrollY);
